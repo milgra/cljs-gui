@@ -5,24 +5,16 @@
             [cljs-http.client :as http]
             [cljs.core.async :refer [<! chan put! take! poll!]]
             [cljs.core.async :refer-macros [go]]
-            [brawl.surface :as surface]
-            [brawl.svg :as svg]
-            [brawl.mass :as mass]
-            [brawl.math4 :as math4]
-            [brawl.shape :as shape]
             [brawl.webgl :as webgl]
-            [brawl.actor :as actor]
-            [brawl.ui :as ui])
+            [brawl.math4 :as math4])
   (:import [goog.events EventType]))
   
 
 (defn load-level! [channel name]
   (go
     (let [response (<! (http/get name
-                                 {:with-credentials? false}))
-          xmlstr (xml->clj (:body response) {:strict false})
-          shapes (svg/psvg xmlstr "")]
-      (put! channel shapes))))
+                                 {:with-credentials? false}))]
+      (put! channel (:body response)))))
 
 
 (defn load-image! [channel name]
@@ -52,20 +44,12 @@
 
   (let
       [initstate {:glstate (webgl/init)
-                  :level_file "level0.svg"
-                  :level_state "none"
+                  :desc_file "level0.svg"
                   :font-file "font.png"
-                  :keypresses {}
-                  :trans [500.0 300.0]
-                  :speed [0.0 0.0]
-                  :masses [(mass/mass2 500.0 300.0 1.0 1.0 1.0)]
-                  :actor (actor/init 480.0 300.0)}
-
+                  :keypresses {}}
        filechannel (chan)
-       keychannel (chan)
        imagechannel (chan)
-       
-       ]
+       keychannel (chan)]
 
     ;; key listeners
 
@@ -93,107 +77,36 @@
     
     (animate
      initstate
-     (fn [state frame time]
-       (cond 
-         
-         (= (:level_state state) "none")
-         (do
-           (load-level! filechannel (:level_file state))
-           (assoc state :level_state "loading"))
-         
-         (= (:level_state state) "loading")
-         (let [shapes (poll! filechannel)]
-           (if shapes
-             (let [surfacepts (filter #(and (= (% :id) "Surfaces") (not (contains? % :color))) shapes )
-                   lines (partition 2 (flatten (map (fn [shape]
-                                (partition 2 (flatten (partition 2 1 (:path shape)))))
-                              surfacepts)))]
- 
-               (-> state
-                   (assoc :glstate (webgl/loadshapes (:glstate state) shapes))
-                   (assoc :surfaces (surface/generate-from-pointlist surfacepts))
-                   (assoc :lines lines )
-                   (assoc :level_state "loaded")))
-               state))
-
-
-         (= (:level_state state) "loaded")
-         (let [[tx ty] (:trans state)
-               [sx sy] (:speed state)
-               ratio (/ (min (max (Math/abs sx) (Math/abs sy)) 40.0) 40.0)
-               r (/ (.-innerWidth js/window) (.-innerHeight js/window) )
-               h 300.0
-               w (* h r)
-               projection (math4/proj_ortho
-                           ;; (- tx 500.0)
-                           ;; (+ tx 500.0)
-                           ;; (+ ty 500.0)
-                           ;; (- ty 500.0)
-                           (- tx (+ w (* ratio 50.0)))
-                           (+ tx (+ w (* ratio 50.0)))
-                           (+ ty (+ h (* ratio 50.0)))
-                           (- ty (+ h (* ratio 50.0)))
-                           -1.0 1.0)
-
-               image (poll! imagechannel)
-               
-               keyevent (poll! keychannel)
-
-               variation (Math/floor (mod (/ time 500.0) 3.0 ))
-               
-               surfaces (:surfaces state)
-               masses (:masses state)
-
-               newactor (actor/newstate ( :actor state) surfaces 1.0)
-               
-               newmasses (mass/update-masses masses surfaces 1.0)
-
-               newglstate (if image
-                            (webgl/loadtexture! (:glstate state) image)
-                            (:glstate state))
-
-               newstate (-> state
-                            (assoc :glstate newglstate)
-                            (assoc :actor newactor)
-                            (assoc :masses newmasses))]
-           
-           ;; draw scene
-           (webgl/drawshapes! (:glstate state) projection (:trans state) variation)
-           (webgl/drawtriangles! (:glstate state) projection (actor/get-skin-triangles newactor))
-           (webgl/drawlines! (:glstate state) projection (:lines state))
-           (webgl/drawpoints! (:glstate state) projection (map :trans newmasses))
-           (webgl/drawpoints! (:glstate state) projection (actor/getpoints newactor))
-           (webgl/drawlines! (:glstate state) projection (actor/getlines newactor))
-
-           (webgl/draw-ui-quads! (:glstate state) projection)
-           ;; (actors/update actor controlstate)
-           
-           ;; handle keypresses, modify main point trans
-           
-           (let [keycodes (if keyevent
-                            (assoc (:keypresses state) (:code keyevent) (:value keyevent))
-                            (:keypresses state))
-                 
-                 nsx (cond
-                       (keycodes 37) (- sx 0.4)
-                       (keycodes 39) (+ sx 0.4)
-                       "default" (* sx 0.9))
-                 
-                 nsy (cond
-                       (keycodes 38) (- sy 0.4)
-                       (keycodes 40) (+ sy 0.4)
-                       "default" (* sy 0.9))
-                 
-                 ntx (+ tx sx)
-                 nty (+ ty sy)]
+     (fn [state frame time]         
+       (let [  r (/ (.-innerWidth js/window) (.-innerHeight js/window) )
+             h 300.0
+             w (* h r)
+             projection (math4/proj_ortho
+                         ;; (- tx 500.0)
+                         ;; (+ tx 500.0)
+                         ;; (+ ty 500.0)
+                         ;; (- ty 500.0)
+                         (- w)
+                         (+ w)
+                         (+ h)
+                         (- h)
+                         -1.0 1.0)
              
-             ;; return with updated state
-             (-> newstate
-                 (assoc :keypresses keycodes)
-                 (assoc :speed [nsx nsy])
-                 (assoc :trans [ntx nty]))
-             )
-           )
+             image (poll! imagechannel)               
+             keyevent (poll! keychannel)
+             
+             newglstate (if image
+                          (webgl/loadtexture! (:glstate state) image)
+                          (:glstate state))
+             
+             newstate (-> state
+                          (assoc :glstate newglstate))]
+         
+         (webgl/draw-ui-quads! (:glstate state) projection)
+
+         ;; return with new state
+
+         newstate
          )
        )
      )
