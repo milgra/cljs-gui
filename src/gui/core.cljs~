@@ -1,12 +1,12 @@
-(ns ^:figwheel-hooks brawl.core
+(ns ^:figwheel-hooks gui.core
   (:require [goog.dom :as gdom]
             [goog.events :as events]
             [tubax.core :refer [xml->clj]]
             [cljs-http.client :as http]
             [cljs.core.async :refer [<! chan put! take! poll!]]
             [cljs.core.async :refer-macros [go]]
-            [brawl.webgl :as webgl]
-            [brawl.math4 :as math4])
+            [gui.webgl :as webgl]
+            [gui.math4 :as math4])
   (:import [goog.events EventType]))
   
 
