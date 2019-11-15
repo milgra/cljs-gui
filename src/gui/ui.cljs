@@ -116,14 +116,14 @@
   (reduce (fn [result letter]
          (let [[x y wth hth ox oy] (getinfo letter)
                {lx :rx ly :ry lwth :wth lhth :hth} (if (empty? result)
-                                                   {:rx 0.0 :ry 0.0 :wth 0.0 :hth 0.0 }
+                                                   {:rx 0.0 :ry 100.0 :wth 0.0 :hth 0.0 }
                                                    (last result))
                tlx (/ x (:width font))
                tly (/ y (:height font))
                brx (/ (+ x wth) (:width font))
                bly (/ (+ y hth) (:height font))
                glyph {:str letter
-                      :rx (+ lx lwth 5)
+                      :rx (+ lx lwth 1)
                       :ry ly
                       :x (- (+ lx lwth 5) ox)
                       :y (- ly oy)

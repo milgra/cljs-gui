@@ -67,40 +67,6 @@
     (assoc state :texture tex)))
 
 
-(defn draw-ui-quads! [{:keys [context ui-shader ui-buffer ui-location-pos ui-location-texcoord texture] :as state } projection]
-
-  (.activeTexture context texture-unit/texture0)
-  (.bindTexture context texture-target/texture-2d texture)
-
-  (buffers/draw!
-   context
-   :count 6
-   :first 0
-   :shader ui-shader
-   :draw-mode draw-mode/triangles
-   :attributes [{:buffer ui-buffer
-                 :location ui-location-pos
-                 :components-per-vertex 2
-                 :type data-type/float
-                 :offset 0
-                 :stride 16}
-                {:buffer ui-buffer
-                 :location ui-location-texcoord
-                 :components-per-vertex 2
-                 :type data-type/float
-                 :offset 8
-                 :stride 16}]
-   :uniforms [{:name "projection"
-               :type :mat4
-               :values projection}
-              {:name "texture_main"
-               :type :sampler-2d
-               :values 0}])
-
-  ;; return state
-  state
-  )
-
 (defn draw-glyphs! [{:keys [context ui-shader ui-buffer ui-location-pos ui-location-texcoord texture] :as state } projection glyphs]
 
   (let [vertexes (flatten (map (fn [ { :keys [ x y wth hth ttl ttr tbl tbr ] } ]
@@ -114,8 +80,6 @@
                                   [x (+ y hth)] tbl )
                         ) glyphs ) ) ]
 
-    (println "vertexes" vertexes)
-    
     (.bindBuffer context
                  buffer-object/array-buffer
                  ui-buffer)

@@ -52,7 +52,7 @@
        imagechannel (chan)
        keychannel (chan)
 
-       label (ui/get-label-glyphs "karoly kiraly") ]
+       label (ui/get-label-glyphs "Karoly Kiraly") ]
     
     ;; key listeners
 
@@ -85,15 +85,12 @@
              h 300.0
              w (* h r)
              projection (math4/proj_ortho
-                         ;; (- tx 500.0)
-                         ;; (+ tx 500.0)
-                         ;; (+ ty 500.0)
-                         ;; (- ty 500.0)
-                         (- w)
-                         (+ w)
-                         (+ h)
-                         (- h)
-                         -1.0 1.0)
+                         0
+                         (.-innerWidth js/window)
+                         (.-innerHeight js/window)
+                         0
+                         -1.0
+                         1.0)
              
              image (poll! imagechannel)               
              keyevent (poll! keychannel)
@@ -105,8 +102,6 @@
              newstate (-> state
                           (assoc :glstate newglstate))]
          
-         ;;(webgl/draw-ui-quads! (:glstate state) projection)
-
          (webgl/draw-glyphs! (:glstate state) projection label)
          
          ;; return with new state
