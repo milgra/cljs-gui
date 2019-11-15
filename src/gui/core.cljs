@@ -6,7 +6,8 @@
             [cljs.core.async :refer [<! chan put! take! poll!]]
             [cljs.core.async :refer-macros [go]]
             [gui.webgl :as webgl]
-            [gui.math4 :as math4])
+            [gui.math4 :as math4]
+            [gui.ui :as ui])
   (:import [goog.events EventType]))
   
 
@@ -49,8 +50,10 @@
                   :keypresses {}}
        filechannel (chan)
        imagechannel (chan)
-       keychannel (chan)]
+       keychannel (chan)
 
+       label (ui/get-label-glyphs "karoly kiraly") ]
+    
     ;; key listeners
 
     (events/listen
@@ -78,7 +81,7 @@
     (animate
      initstate
      (fn [state frame time]         
-       (let [  r (/ (.-innerWidth js/window) (.-innerHeight js/window) )
+       (let [r (/ (.-innerWidth js/window) (.-innerHeight js/window) )
              h 300.0
              w (* h r)
              projection (math4/proj_ortho
@@ -102,8 +105,10 @@
              newstate (-> state
                           (assoc :glstate newglstate))]
          
-         (webgl/draw-ui-quads! (:glstate state) projection)
+         ;;(webgl/draw-ui-quads! (:glstate state) projection)
 
+         (webgl/draw-glyphs! (:glstate state) projection label)
+         
          ;; return with new state
 
          newstate

@@ -41,13 +41,13 @@
         ui-buffer (buffers/create-buffer
                    context
                    (ta/float32
-                    [0.0   0.0   0.0 1.0 0.0 0.0
-                     500.0 500.0 0.0 1.0 1.0 1.0
-                     500.0 0.0   0.0 1.0 1.0 0.0
+                    [0.0   0.0   0.0 0.0
+                     500.0 500.0 1.0 1.0
+                     500.0 0.0   1.0 0.0
 
-                     0.0   0.0   0.0 1.0 0.0 0.0
-                     0.0 500.0   0.0 1.0 0.0 1.0
-                     500.0 500.0 0.0 1.0 1.0 1.0]
+                     0.0   0.0   0.0 0.0
+                     0.0   500.0 0.0 1.0
+                     500.0 500.0 1.0 1.0]
                     )
                    buffer-object/array-buffer
                    buffer-object/static-draw)
@@ -80,24 +80,83 @@
    :draw-mode draw-mode/triangles
    :attributes [{:buffer ui-buffer
                  :location ui-location-pos
-                 :components-per-vertex 4
+                 :components-per-vertex 2
                  :type data-type/float
                  :offset 0
-                 :stride 24}
+                 :stride 16}
                 {:buffer ui-buffer
                  :location ui-location-texcoord
                  :components-per-vertex 2
                  :type data-type/float
-                 :offset 16
-                 :stride 24}]
+                 :offset 8
+                 :stride 16}]
    :uniforms [{:name "projection"
                :type :mat4
                :values projection}
               {:name "texture_main"
                :type :sampler-2d
-               :values 0}
-              ])
+               :values 0}])
 
   ;; return state
   state
+  )
+
+(defn draw-glyphs! [{:keys [context ui-shader ui-buffer ui-location-pos ui-location-texcoord texture] :as state } projection glyphs]
+
+  (let [vertexes (flatten (map (fn [ { :keys [ x y wth hth ttl ttr tbl tbr ] } ]
+                                 (concat
+                                  [x y] ttl
+                                  [(+ x wth) y] ttr
+                                  [x (+ y hth)] tbl
+
+                                  [(+ x wth) y] ttr
+                                  [(+ x wth) (+ y hth)] tbr
+                                  [x (+ y hth)] tbl )
+                        ) glyphs ) ) ]
+
+    (println "vertexes" vertexes)
+    
+    (.bindBuffer context
+                 buffer-object/array-buffer
+                 ui-buffer)
+    
+    ;; load in new vertexdata
+    
+    (.bufferData context
+                 buffer-object/array-buffer
+                 (ta/float32 vertexes)
+                 buffer-object/dynamic-draw)
+    
+    (.activeTexture context texture-unit/texture0)
+    (.bindTexture context texture-target/texture-2d texture)
+    
+    (buffers/draw!
+     context
+     :count (/ (count vertexes) 4)
+     :first 0
+     :shader ui-shader
+     :draw-mode draw-mode/triangles
+     :attributes [{:buffer ui-buffer
+                   :location ui-location-pos
+                   :components-per-vertex 2
+                   :type data-type/float
+                   :offset 0
+                   :stride 16}
+                  {:buffer ui-buffer
+                   :location ui-location-texcoord
+                   :components-per-vertex 2
+                   :type data-type/float
+                   :offset 8
+                   :stride 16}]
+     :uniforms [{:name "projection"
+                 :type :mat4
+                 :values projection}
+                {:name "texture_main"
+                 :type :sampler-2d
+                 :values 0}
+                ])
+    
+    ;; return state
+    state
+    )
   )
