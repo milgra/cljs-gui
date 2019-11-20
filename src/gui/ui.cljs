@@ -122,7 +122,8 @@
                tly (/ y (:height font))
                brx (/ (+ x wth) (:width font))
                bly (/ (+ y hth) (:height font))
-               glyph {:str letter
+               glyph {:img "font.png"
+                      :str letter
                       :rx (+ lx lwth 1)
                       :ry ly
                       :x (- (+ lx lwth 5) ox)
@@ -144,3 +145,24 @@
            (-> glyph
                (update :x (+ x dx))
                (update :y (+ y dy)))) glyphs)))
+
+
+(defn get-rect [ x y w h col texmap ]
+  ;; if texmap contains the color, get the coords
+  ;; (let [ coords ( if (textmap hastex str color)
+  ;; (texmap tex str color)
+  ;; (texmap add str color colorbmp)
+  
+  ;;texmap get str color)]
+  ;; 
+  ;;(let [result {:tex texmap
+    ;;            :x x
+      ;;          :y y
+        ;;        :wth w
+          ;;      :hth h
+            ;;    :ttl [tlx tly]
+              ;;  :ttr [brx tly]
+              ;;  :tbl [tlx bly]
+              ;;  :tbr [brx bly]}]
+   ;; )
+  )

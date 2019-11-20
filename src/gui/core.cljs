@@ -7,7 +7,9 @@
             [cljs.core.async :refer-macros [go]]
             [gui.webgl :as webgl]
             [gui.math4 :as math4]
-            [gui.ui :as ui])
+            [gui.ui :as ui]
+            [gui.bitmap :as bitmap]
+            [gui.texmap :as texmap])
   (:import [goog.events EventType]))
   
 
@@ -52,7 +54,20 @@
        imagechannel (chan)
        keychannel (chan)
 
+       ;; create texture from glyphmap image and codepoints
+
+       redbmp (bitmap/fill (bitmap/init 10 10) 0xFF000000)
+       
+       glyphmap (texmap/init 1024 256)
+              
+       ;; create texture for colors
+
+       uitexmap (texmap/setbmp (texmap/init 1024 1024) redbmp "0xFF000000")
+       
        label (ui/get-label-glyphs "Karoly Kiraly") ]
+
+    (println "glyphmap")
+    (println "uitexmap")
     
     ;; key listeners
 
