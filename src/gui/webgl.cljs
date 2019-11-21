@@ -8,6 +8,10 @@
             [cljs-webgl.constants.buffer-object :as buffer-object]
             [cljs-webgl.constants.shader :as shader]
             [cljs-webgl.constants.texture-target :as texture-target]
+            [cljs-webgl.constants.texture-parameter-name :as texture-parameter-name]
+            [cljs-webgl.constants.parameter-name :as parameter-name]
+            [cljs-webgl.constants.texture-filter :as texture-filter]
+            [cljs-webgl.constants.pixel-format :as pixel-format]
             [cljs-webgl.buffers :as buffers]
             [cljs-webgl.typed-arrays :as ta]))
   
@@ -56,18 +60,60 @@
         ui-location-texcoord (shaders/get-attrib-location context ui-shader "texcoord")]
 
     {:context context
+     :textures {}
      :ui-shader ui-shader
      :ui-buffer ui-buffer
      :ui-location-pos ui-location-pos
      :ui-location-texcoord ui-location-texcoord }))
 
 
-(defn loadtexture! [ {:keys [context ui-buffer] :as state} image ]
+(defn loadtexture! [ {:keys [context ui-buffer] :as state} image id ]
     (let [ tex (texture/create-texture context :image image :generate-mipmaps? true)]
-    (assoc state :texture tex)))
+    (assoc-in state [:textures (keyword id)] tex)))
 
+(defn loadtexture-bytearray-imp! [gl-context & {:keys [image
+                                                  target
+                                                  level-of-detail
+                                                  internal-pixel-format
+                                                  width
+                                                  height
+                                                  border
+                                                  pixel-format
+                                                  data-type
+                                                  ;;pixel-store-modes
+                                                  generate-mipmaps?
+                                                  data-type
+                                                  parameters] :as opts}]
+  
+  (let [texture (.createTexture gl-context)
+        target (or target texture-target/texture-2d)]
 
-(defn draw-glyphs! [{:keys [context ui-shader ui-buffer ui-location-pos ui-location-texcoord texture] :as state } projection glyphs]
+    (.bindTexture gl-context target texture)
+    
+    (.texImage2D
+      gl-context
+      target
+      (or level-of-detail 0)
+      (or internal-pixel-format pixel-format/rgba)
+      width
+      height
+      0
+      (or pixel-format pixel-format/rgba)
+      data-type/unsigned-byte
+      (js/Uint8Array. image))
+
+    (when generate-mipmaps?
+      (.generateMipmap gl-context target))
+
+    (.bindTexture gl-context target nil)
+    
+    texture))
+
+(defn loadtexture-bytearray! [ {:keys [context] :as state} {bitmap :bitmap :as texmap} id ]
+  (let [ tex (loadtexture-bytearray-imp! context :image (:data bitmap ) :width (:width bitmap) :height (:height bitmap) :generate-mipmaps? true)]
+    (assoc-in state [:textures (keyword id)] tex)))
+
+(defn draw-glyphs! [{:keys [context ui-shader ui-buffer ui-location-pos ui-location-texcoord textures] :as state } projection glyphs]
 
   (let [vertexes (flatten (map (fn [ { :keys [ x y wth hth ttl ttr tbl tbr ] } ]
                                  (concat
@@ -77,8 +123,7 @@
 
                                   [(+ x wth) y] ttr
                                   [(+ x wth) (+ y hth)] tbr
-                                  [x (+ y hth)] tbl )
-                        ) glyphs ) ) ]
+                                  [x (+ y hth)] tbl)) glyphs))]
 
     (.bindBuffer context
                  buffer-object/array-buffer
@@ -92,7 +137,65 @@
                  buffer-object/dynamic-draw)
     
     (.activeTexture context texture-unit/texture0)
-    (.bindTexture context texture-target/texture-2d texture)
+    (.bindTexture context texture-target/texture-2d (textures :glyphmap))
+    
+    (buffers/draw!
+     context
+     :count (/ (count vertexes) 4)
+     :first 0
+     :shader ui-shader
+     :draw-mode draw-mode/triangles
+     :attributes [{:buffer ui-buffer
+                   :location ui-location-pos
+                   :components-per-vertex 2
+                   :type data-type/float
+                   :offset 0
+                   :stride 16}
+                  {:buffer ui-buffer
+                   :location ui-location-texcoord
+                   :components-per-vertex 2
+                   :type data-type/float
+                   :offset 8
+                   :stride 16}]
+     :uniforms [{:name "projection"
+                 :type :mat4
+                 :values projection}
+                {:name "texture_main"
+                 :type :sampler-2d
+                 :values 0}
+                ])
+    
+    ;; return state
+    state
+    )
+  )
+
+(defn draw-quads! [{:keys [context ui-shader ui-buffer ui-location-pos ui-location-texcoord textures] :as state } projection quads]
+
+  (let [vertexes (flatten (map (fn [ { :keys [ x y wth hth ttl ttr tbl tbr ] } ]
+                                 (concat
+                                  [x y] ttl
+                                  [(+ x wth) y] ttr
+                                  [x (+ y hth)] tbl
+
+                                  [(+ x wth) y] ttr
+                                  [(+ x wth) (+ y hth)] tbr
+                                  [x (+ y hth)] tbl )
+                        ) quads ) ) ]
+
+    (.bindBuffer context
+                 buffer-object/array-buffer
+                 ui-buffer)
+    
+    ;; load in new vertexdata
+    
+    (.bufferData context
+                 buffer-object/array-buffer
+                 (ta/float32 vertexes)
+                 buffer-object/dynamic-draw)
+    
+    (.activeTexture context texture-unit/texture0)
+    (.bindTexture context texture-target/texture-2d (textures :uitexmap))
     
     (buffers/draw!
      context

@@ -46,28 +46,26 @@
 (defn main []
 
   (let
-      [initstate {:glstate (webgl/init)
+      [keychannel (chan)
+       filechannel (chan)
+       imagechannel (chan)
+
+       glyphmap (texmap/init 1024 256 0 0 0 0)
+       uitexmap (-> (texmap/init 1024 1024 0 0 0 0xFF)
+                    (texmap/setbmp (str 0xFF 0 0 0xFF) (bitmap/init 10 10 0xFF 0 0 0xFF)))
+
+       square (ui/get-rect uitexmap 10.0 10.0 150.0 50.0 0xFF 0 0 0xFF)
+
+       glstate (webgl/loadtexture-bytearray! (webgl/init) uitexmap "uitexmap")
+             
+       initstate {:glstate glstate
                   :desc_file "level0.svg"
                   :font-file "font.png"
                   :keypresses {}}
-       filechannel (chan)
-       imagechannel (chan)
-       keychannel (chan)
 
-       ;; create texture from glyphmap image and codepoints
-
-       redbmp (bitmap/fill (bitmap/init 10 10) 0xFF000000)
-       
-       glyphmap (texmap/init 1024 256)
-              
-       ;; create texture for colors
-
-       uitexmap (texmap/setbmp (texmap/init 1024 1024) redbmp "0xFF000000")
-       
        label (ui/get-label-glyphs "Karoly Kiraly") ]
 
-    (println "glyphmap")
-    (println "uitexmap")
+    ;; upload ui texture to webgl handler
     
     ;; key listeners
 
@@ -110,14 +108,15 @@
              image (poll! imagechannel)               
              keyevent (poll! keychannel)
              
-             newglstate (if image
-                          (webgl/loadtexture! (:glstate state) image)
+             newnewglstate (if image
+                          (webgl/loadtexture! (:glstate state) image "glyphmap")
                           (:glstate state))
              
              newstate (-> state
-                          (assoc :glstate newglstate))]
+                          (assoc :glstate newnewglstate))]
          
          (webgl/draw-glyphs! (:glstate state) projection label)
+         (webgl/draw-quads! (:glstate state) projection [square])
          
          ;; return with new state
 

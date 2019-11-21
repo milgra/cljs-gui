@@ -1,4 +1,6 @@
-(ns gui.ui)
+(ns gui.ui
+  (:require [gui.texmap :as texmap]
+             [gui.bitmap :as bitmap]))
 
 ;; https://evanw.github.io/font-texture-generator/
 
@@ -147,22 +149,26 @@
                (update :y (+ y dy)))) glyphs)))
 
 
-(defn get-rect [ x y w h col texmap ]
-  ;; if texmap contains the color, get the coords
-  ;; (let [ coords ( if (textmap hastex str color)
-  ;; (texmap tex str color)
-  ;; (texmap add str color colorbmp)
-  
-  ;;texmap get str color)]
-  ;; 
-  ;;(let [result {:tex texmap
-    ;;            :x x
-      ;;          :y y
-        ;;        :wth w
-          ;;      :hth h
-            ;;    :ttl [tlx tly]
-              ;;  :ttr [brx tly]
-              ;;  :tbl [tlx bly]
-              ;;  :tbr [brx bly]}]
-   ;; )
-  )
+(defn get-rect [ tmap x y w h r g b a ]
+
+  (let [newtmap (if-not (texmap/hasbmp? tmap (str r g b a))
+                  (texmap/setbmp tmap (str r g b a) (bitmap/init 10 10 r g b a))
+                  tmap)
+ 
+        [[tlcx tlcy][brcx brcy]] (texmap/getbmp newtmap (str r g b a))
+
+        tlx (/ tlcx (:width newtmap))
+        tly (/ tlcy (:height newtmap))
+        brx (/ brcx (:width newtmap))
+        bry (/ brcy (:height newtmap))
+
+        result {;;:tex tmap
+                :x x
+                :y y
+                :wth w
+                :hth h
+                :ttl [tlx tly]
+                :ttr [brx tly]
+                :tbl [tlx bry]
+                :tbr [brx bry]}]
+    result))

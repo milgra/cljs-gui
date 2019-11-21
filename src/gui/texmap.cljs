@@ -1,13 +1,13 @@
-(ns gui.texmap)
+(ns gui.texmap
+  (:require [gui.bitmap :as bitmap]))
 
-(defn init [w h]
-  {:data (js/Uint32Array. (* w h))
-   :width w
-   :height h
-   :contents {}
-   :rowh 0
-   :rowx 0
-   :rowy 0})
+(defn init [w h r g b a]
+  (let [result {:bitmap (bitmap/init w h r g b a)
+                :contents {}
+                :rowh 0
+                :rowx 0
+                :rowy 0}]
+    result))
 
 (defn hasbmp? [ { contents :contents } id ]
   (contains? contents id))
@@ -15,52 +15,23 @@
 (defn getbmp [ { contents :contents } id ]
   (contents get id))
 
-(defn setbmp! [{:keys [data width height contents rowx rowy rowh] :as texmap}
-               {newdata :data newwidth :width newheight :height :as newbmp}
-               id]
-  
+(defn setbmp [{:keys [bitmap contents rowx rowy rowh] :as texmap}
+              id
+              {:keys [data width height] :as newbmp}]
+
   ;; get x and y position for the new content, check overflow
-  (let [newy (if (> (+ rowx newwidth) width)
+  (let [newy (if (> (+ rowx width) (bitmap :width))
                rowh
                rowy)
         
-        newx (if (> (+ rowx newwidth) width)
+        newx (if (> (+ rowx width) (bitmap :width))
                0
                rowx)
         
-        over? (or (> (+ newx newwidth) width ) (> (+ newy newheight) height))]
+        over? (or (> (+ newx width) (bitmap :width)) (> (+ newy height) (bitmap :height)))]
 
     (if over?
       nil
-      ;; copy new bitmap line by line to texture
-      (loop [index 0]
-
-        (println "index" index)
-
-        (let [linestart (* index newwidth)
-              lineend (+ (* index newwidth) newwidth)
-              line (.slice newdata linestart lineend)
-              
-              prevline (if (= newy 0)
-                         0
-                         (- newy 1))
-              nextstart (+ (* (+ prevline index) width) newx)]
-
-          (.set data line nextstart)
-
-          (println "start end next nextdata" linestart lineend nextstart)
-          
-          (if (< index newheight)
-            (do
-              (println "ONE")
-              (recur (inc index))
-              )
-            (-> texmap
-                (assoc-in [:contents id] [ [newx newy] [(+ newx newwidth) (+ newy newheight)]])
-                (assoc :data data))
-            )
-          )
-        )
-      )
-    )
-  )
+      (-> texmap
+        (assoc-in [:contents id] [ [newx newy] [(+ newx width) (+ newy height)]])
+        (assoc :bitmap (bitmap/insert bitmap newbmp newx newy))))))
