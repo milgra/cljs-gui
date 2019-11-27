@@ -99,12 +99,14 @@
              
              newglstate (webgl/draw! (:glstate state) 
                                      projection
-                                     [{:x 30.0 :y 150.0
+                                     [
+                                      {:x 40.0 :y 140.0
+                                       :wth 191.0 :hth 40.0
+                                       :id "color 0xFF0000FF"}
+                                      {:x 30.0 :y 150.0
                                        :wth 191.0 :hth 40.0
                                        :id "glyph H"}
-                                      {:x 30.0 :y 250.0
-                                       :wth 191.0 :hth 40.0
-                                       :id "color 0xFF0000FF"}])]
+                                      ])]
 
          (assoc state :glstate newglstate))))))
 

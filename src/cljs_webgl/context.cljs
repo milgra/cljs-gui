@@ -40,6 +40,7 @@ For further information on context creation parameters see [WebGLContextAttribut
                                :preferLowPowerToHighPerformance prefer-low-power-to-high-performance,
                                :failIfMajorPerformanceCaveat fail-if-major-performance-caveat}))
            opts (attributes->js (merge default-attributes context-attributes))]
+       (println "OPTS" opts)
        (or
          (.getContext canvas-element "experimental-webgl" opts)
          (.getContext canvas-element "webgl" opts)))))

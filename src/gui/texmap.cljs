@@ -4,7 +4,7 @@
 (defn init [w h r g b a]
   (let [result {:bitmap (bitmap/init w h r g b a)
                 :contents {}
-                :changed false
+                :changed true
                 :rowh 0
                 :rowx 0
                 :rowy 0}]
@@ -20,8 +20,6 @@
               id
               {:keys [data width height] :as newbmp}]
 
-  (println "setbmp" id)
-  ;; get x and y position for the new content, check overflow
   (let [newy (if (> (+ rowx width) (bitmap :width))
                rowh
                rowy)
@@ -40,10 +38,13 @@
         newbry (/ newh (bitmap :height))
         
         over? (or (> neww (bitmap :width)) (> newh (bitmap :height)))]
-
+    
     (if over?
       nil
       (-> texmap
-        (assoc-in [:contents id] [ newtlx newtly newbrx newbry])
-        (assoc :bitmap (bitmap/insert bitmap newbmp newx newy))
-        (assoc :changed true)))))
+          (assoc-in [:contents id] [ newtlx newtly newbrx newbry])
+          (assoc :rowx neww)
+          (assoc :rowy newy)
+          (assoc :rowh rowh)
+          (assoc :bitmap (bitmap/insert bitmap newbmp newx newy))
+          (assoc :changed true)))))

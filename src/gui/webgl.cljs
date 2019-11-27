@@ -2,7 +2,10 @@
   (:require [cljs-webgl.context :as context]
             [cljs-webgl.shaders :as shaders]
             [cljs-webgl.texture :as texture]
+            [cljs-webgl.constants.capability :as capability]
             [cljs-webgl.constants.texture-unit :as texture-unit]
+            [cljs-webgl.constants.blending-factor-dest :as bldest]
+            [cljs-webgl.constants.blending-factor-src :as bldsrc]
             [cljs-webgl.constants.draw-mode :as draw-mode]
             [cljs-webgl.constants.data-type :as data-type]
             [cljs-webgl.constants.buffer-object :as buffer-object]
@@ -17,7 +20,6 @@
             [cljs-webgl.typed-arrays :as ta]
             [gui.bitmap :as bitmap]
             [gui.texmap :as texmap]
-            [gui.webfont :as webfont]
             [clojure.string :as str]))
 
 (def ui-vertex-source
@@ -40,7 +42,7 @@
    }")
 
 (defn init []
-  (let [context (context/get-context (.getElementById js/document "main"))
+  (let [context (context/get-context (.getElementById js/document "main") {:premultiplied-alpha true})
 
         ui-shader (shaders/create-program
                    context
@@ -60,12 +62,15 @@
                    buffer-object/array-buffer
                    buffer-object/static-draw)
 
+        ui-texmap (texmap/init 1024 1024 0 0 0 0)
+
         ui-texture (.createTexture context) 
 
         ui-location-pos (shaders/get-attrib-location context ui-shader "position")
-        ui-location-texcoord (shaders/get-attrib-location context ui-shader "texcoord")
+        ui-location-texcoord (shaders/get-attrib-location context ui-shader "texcoord")]
 
-        ui-texmap (texmap/init 1024 1024 0 0 0 0)]
+    (.enable context capability/blend)
+    (.blendFunc context bldest/src-alpha bldest/one-minus-src-alpha)
     
     {:context context
      :textures {}
@@ -75,6 +80,17 @@
      :ui-texture ui-texture
      :ui-location-pos ui-location-pos
      :ui-location-texcoord ui-location-texcoord }))
+
+
+(defn bitmap-for-glyph [ ]
+  (let [context (.getContext (. js/document getElementById "temp") "2d" )]
+    (set! (.-font context) "40px Cantarell")
+    (let [width (int (.-width (.measureText context "Tóth Milán")))
+          height 40]
+      (.fillText context "Tóth Milán" 0 30)
+      {:data (.-data (.getImageData context 0 0 width 40))
+       :width width
+       :height 40})))
 
 
 (defn tex-gen-for-ids [ui-texmap texids]
@@ -97,11 +113,10 @@
                               a (js/parseInt (subs rem 6 8) 16)]
                           (texmap/setbmp tmap id (bitmap/init 10 10 r g b a)))
                         (str/starts-with? id "glyph")
-                        (let [bmp (webfont/bitmap-for-glyph)]
+                        (let [bmp (bitmap-for-glyph)]
                           (texmap/setbmp tmap id bmp))
                         :default
-                        tmap)
-                      )]
+                        tmap))]
         (recur (rest ids) newtmap)))))
 
 
@@ -124,7 +139,7 @@
         vertexes (flatten
                   (map
                    (fn [{:keys [x y wth hth id]}]
-                     (let [[tlx tly brx bry] (texmap/getbmp ui-texmap id)]             
+                     (let [[tlx tly brx bry] (texmap/getbmp newtexmap id)]             
                        (concat
                         [x y] [tlx tly]
                         [(+ x wth) y] [brx tly]
@@ -133,31 +148,30 @@
                         [(+ x wth) y] [brx tly]
                         [(+ x wth) (+ y hth)] [brx bry]
                         [x (+ y hth)] [tlx bry] ))) views))] 
-        
+
     (.activeTexture context texture-unit/texture0)
     (.bindTexture context texture-target/texture-2d ui-texture)
-
-    ;; upload texturemap if needed
+ 
+    ;; upload texturemap if needed 
     (if (newtexmap :changed)
-      (.texImage2D
-       context
-       texture-target/texture-2d
-       0
-       pixel-format/rgba
-       1024
-       1024
-       0
-       pixel-format/rgba
-       data-type/unsigned-byte
-       (:data (:bitmap ui-texmap))
+      (do
+        
+         (.texImage2D
+         context
+         texture-target/texture-2d
+         0
+         pixel-format/rgba
+         1024
+         1024
+         0
+         pixel-format/rgba
+         data-type/unsigned-byte
+         (:data (:bitmap newtexmap)))
 
-       (.texParameteri context texture-target/texture-2d texture-parameter-name/texture-wrap-s wrap-mode/clamp-to-edge)
-       (.texParameteri context texture-target/texture-2d texture-parameter-name/texture-wrap-t wrap-mode/clamp-to-edge)
-       (.texParameteri context texture-target/texture-2d texture-parameter-name/texture-min-filter texture-filter/linear)
-       (.texParameteri context texture-target/texture-2d texture-parameter-name/texture-mag-filter texture-filter/linear)
-
-       ;;(.generateMipmap context texture-target/texture-2d)
-       ))
+         (.texParameteri context texture-target/texture-2d texture-parameter-name/texture-wrap-s wrap-mode/clamp-to-edge)
+         (.texParameteri context texture-target/texture-2d texture-parameter-name/texture-wrap-t wrap-mode/clamp-to-edge)
+         (.texParameteri context texture-target/texture-2d texture-parameter-name/texture-min-filter texture-filter/linear)
+         (.texParameteri context texture-target/texture-2d texture-parameter-name/texture-mag-filter texture-filter/linear)))
     
     (.bindBuffer context
                  buffer-object/array-buffer
@@ -194,4 +208,4 @@
                  :values 0}
                 ])
 
-    (assoc state :ui-texmap newtexmap)))
+    (assoc state :ui-texmap (assoc newtexmap :changed false))))
