@@ -1,13 +1,25 @@
 /* some style */
 
-canvas {
-            background-color: #ccc;
-            display: block;
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            width: 100%;
-            height: 100%;
-        }
+.canvas-main {
+    background-color: #ccc;
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.canvas-temp {
+    background-color: #aaa;
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 50%;
+    right: 0;
+    bottom: 0;
+    width: 50%;
+    height: 100;
+}

@@ -16,14 +16,19 @@
 (defn insert [{da :data wa :width ha :height :as bmp}
               {db :data wb :width hb :height :as src}
               x y]
+  ;;(println "wa ha" wa ha)
+  ;;(println "wb hb" wb hb)
+  ;;(println "to" x y)
   (loop [index 0]
-    (let [src_s (* index wb)
-          src_e (+ (* index wb) wb)
+    (let [src_s (* (* index wb) 4)
+          src_e (* (+ (* index wb) wb) 4)
           src_row (.slice db src_s src_e)
-          bmp_s (+ (* (+ y index) wa) x)]
+          bmp_s (* (+ (* (+ y index) wa) x) 4)]
+      ;;(println "row" src_row)
+      ;;(println "index" + index + "inserting to" bmp_s "between" src_s src_e)
       (.set da src_row bmp_s)
       (if (< index hb)
         (recur (inc index))
         bmp))))
 
-;;(insert (init 10 10 0xFF 0 0 0xFF) (init 5 5 0 0 0 0) 2 2 )
+(insert (init 10 10 0xFF 0 0 0xFF) (init 5 5 0 0 0 0xFF) 2 2 )

@@ -49,24 +49,14 @@
       [keychannel (chan)
        filechannel (chan)
        imagechannel (chan)
-
-       glyphmap (texmap/init 1024 256 0 0 0 0)
-       uitexmap (-> (texmap/init 1024 1024 0 0 0 0xFF)
-                    (texmap/setbmp (str 0xFF 0 0 0xFF) (bitmap/init 10 10 0xFF 0 0 0xFF)))
-
-       square (ui/get-rect uitexmap 10.0 10.0 150.0 50.0 0xFF 0 0 0xFF)
-
-       glstate (webgl/loadtexture-bytearray! (webgl/init) uitexmap "uitexmap")
              
-       initstate {:glstate glstate
+       initstate {:glstate (webgl/init)
                   :desc_file "level0.svg"
                   :font-file "font.png"
                   :keypresses {}}
 
        label (ui/get-label-glyphs "Karoly Kiraly") ]
 
-    ;; upload ui texture to webgl handler
-    
     ;; key listeners
 
     (events/listen
@@ -105,27 +95,18 @@
                          -1.0
                          1.0)
              
-             image (poll! imagechannel)               
              keyevent (poll! keychannel)
              
-             newnewglstate (if image
-                          (webgl/loadtexture! (:glstate state) image "glyphmap")
-                          (:glstate state))
-             
-             newstate (-> state
-                          (assoc :glstate newnewglstate))]
-         
-         (webgl/draw-glyphs! (:glstate state) projection label)
-         (webgl/draw-quads! (:glstate state) projection [square])
-         
-         ;; return with new state
+             newglstate (webgl/draw! (:glstate state) 
+                                     projection
+                                     [{:x 30.0 :y 150.0
+                                       :wth 191.0 :hth 40.0
+                                       :id "glyph H"}
+                                      {:x 30.0 :y 250.0
+                                       :wth 191.0 :hth 40.0
+                                       :id "color 0xFF0000FF"}])]
 
-         newstate
-         )
-       )
-     )
-    )
-  )
+         (assoc state :glstate newglstate))))))
 
 ;; template functions
 
