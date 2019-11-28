@@ -63,16 +63,20 @@
      :ui-location-texcoord ui-location-texcoord}))
 
 
-(defn bitmap-for-glyph [ ]
+(defn width-for-glyph [height text]
+
+  )
+
+(defn bitmap-for-glyph [height text]
   (let [context (.getContext (. js/document getElementById "temp") "2d" )]
-    (set! (.-font context) "40px Cantarell")
+    (set! (.-font context) (str height "px Cantarell"))
     (set! (.-fillStyle context) "#000000")
-    (let [width (int (.-width (.measureText context "Tóth Milán")))
-          height 40]
-      (.fillText context "Tóth Milán" 0 30)
-      {:data (.-data (.getImageData context 0 0 width 40))
+    (set! (.-textBaseline context) "middle")
+    (let [width (int (.-width (.measureText context text)))]
+      (.fillText context text 0 (/ height 2))
+      {:data (.-data (.getImageData context 0 0 width height))
        :width width
-       :height 40})))
+       :height height})))
 
 
 (defn tex-gen-for-ids [ui-texmap texids]
@@ -105,7 +109,7 @@
 
                         ;; show glyph
                         (str/starts-with? id "glyph")
-                        (let [bmp (bitmap-for-glyph)]
+                        (let [bmp (bitmap-for-glyph 50 "Milcsike")]
                           (texmap/setbmp tmap id bmp))
 
                         ;; return empty texmap if unknown
