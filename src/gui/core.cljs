@@ -5,9 +5,9 @@
             [cljs-http.client :as http]
             [cljs.core.async :refer [<! chan put! take! poll!]]
             [cljs.core.async :refer-macros [go]]
+            [gui.ui :as ui]
             [gui.webgl :as webgl]
             [gui.math4 :as math4]
-            [gui.ui :as ui]
             [gui.bitmap :as bitmap]
             [gui.texmap :as texmap])
   (:import [goog.events EventType]))
@@ -92,20 +92,23 @@
                          (.-innerWidth js/window)
                          (.-innerHeight js/window)
                          0
-                         -1.0
-                         1.0)
+                         -10.0
+                         10.0)
              
              keyevent (poll! keychannel)
              
              newglstate (webgl/draw! (:glstate state) 
                                      projection
                                      [
-                                      {:x 40.0 :y 140.0
+                                      {:x 40.0 :y 120.0
                                        :wth 191.0 :hth 40.0
-                                       :id "color 0xFF0000FF"}
-                                      {:x 30.0 :y 150.0
+                                       :id "color 0xFFFFFFFF"}
+                                      {:x 40.0 :y 120.0
                                        :wth 191.0 :hth 40.0
                                        :id "glyph H"}
+                                      {:x 30.0 :y 260.0
+                                       :wth 400.0 :hth 400.0
+                                       :id "debug"}
                                       ])]
 
          (assoc state :glstate newglstate))))))

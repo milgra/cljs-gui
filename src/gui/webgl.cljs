@@ -1,26 +1,19 @@
 (ns gui.webgl
-  (:require [cljs-webgl.context :as context]
+  (:require [gui.bitmap :as bitmap]
+            [gui.texmap :as texmap]
+            [clojure.string :as str]
+            [cljs-webgl.context :as context]
             [cljs-webgl.shaders :as shaders]
             [cljs-webgl.texture :as texture]
-            [cljs-webgl.constants.capability :as capability]
-            [cljs-webgl.constants.texture-unit :as texture-unit]
-            [cljs-webgl.constants.blending-factor-dest :as bldest]
-            [cljs-webgl.constants.blending-factor-src :as bldsrc]
+            [cljs-webgl.buffers :as buffers]
+            [cljs-webgl.typed-arrays :as arrays]
+            [cljs-webgl.constants.shader :as shader]
+            [cljs-webgl.constants.buffer-object :as buffer-object]
             [cljs-webgl.constants.draw-mode :as draw-mode]
             [cljs-webgl.constants.data-type :as data-type]
-            [cljs-webgl.constants.buffer-object :as buffer-object]
-            [cljs-webgl.constants.shader :as shader]
-            [cljs-webgl.constants.texture-target :as texture-target]
-            [cljs-webgl.constants.texture-parameter-name :as texture-parameter-name]
-            [cljs-webgl.constants.parameter-name :as parameter-name]
-            [cljs-webgl.constants.texture-filter :as texture-filter]
-            [cljs-webgl.constants.pixel-format :as pixel-format]
-            [cljs-webgl.constants.texture-wrap-mode :as wrap-mode]
-            [cljs-webgl.buffers :as buffers]
-            [cljs-webgl.typed-arrays :as ta]
-            [gui.bitmap :as bitmap]
-            [gui.texmap :as texmap]
-            [clojure.string :as str]))
+            [cljs-webgl.constants.capability :as capability]
+            [cljs-webgl.constants.blending-factor-dest :as blend]
+            [cljs-webgl.constants.texture-unit :as texture-unit]))
 
 (def ui-vertex-source
   "attribute highp vec4 position;
@@ -38,11 +31,11 @@
    uniform sampler2D texture_main;
    void main( )
    {
-      gl_FragColor = texture2D( texture_main , texcoordv , 0.0 );
-   }")
+      gl_FragColor = texture2D( texture_main , texcoordv);
+}")
 
 (defn init []
-  (let [context (context/get-context (.getElementById js/document "main") {:premultiplied-alpha true})
+  (let [context (context/get-context (.getElementById js/document "main"))
 
         ui-shader (shaders/create-program
                    context
@@ -51,26 +44,14 @@
         
         ui-buffer (buffers/create-buffer
                    context
-                   (ta/float32
-                    [0.0   0.0   0.0 0.0
-                     500.0 500.0 1.0 1.0
-                     500.0 0.0   1.0 0.0
-
-                     0.0   0.0   0.0 0.0
-                     0.0   500.0 0.0 1.0
-                     500.0 500.0 1.0 1.0])
+                   (arrays/float32 [0.0 0.0 0.0 0.0])
                    buffer-object/array-buffer
                    buffer-object/static-draw)
 
         ui-texmap (texmap/init 1024 1024 0 0 0 0)
-
         ui-texture (.createTexture context) 
-
         ui-location-pos (shaders/get-attrib-location context ui-shader "position")
         ui-location-texcoord (shaders/get-attrib-location context ui-shader "texcoord")]
-
-    (.enable context capability/blend)
-    (.blendFunc context bldest/src-alpha bldest/one-minus-src-alpha)
     
     {:context context
      :textures {}
@@ -79,12 +60,13 @@
      :ui-texmap ui-texmap
      :ui-texture ui-texture
      :ui-location-pos ui-location-pos
-     :ui-location-texcoord ui-location-texcoord }))
+     :ui-location-texcoord ui-location-texcoord}))
 
 
 (defn bitmap-for-glyph [ ]
   (let [context (.getContext (. js/document getElementById "temp") "2d" )]
     (set! (.-font context) "40px Cantarell")
+    (set! (.-fillStyle context) "#000000")
     (let [width (int (.-width (.measureText context "Tóth Milán")))
           height 40]
       (.fillText context "Tóth Milán" 0 30)
@@ -103,8 +85,16 @@
             newtmap (if (texmap/hasbmp? tmap id)
                       tmap
                       (cond
+                        
+                        ;; show full texture in quad
+                        (str/starts-with? id "debug")
+                        (assoc-in tmap [:contents id] [0 0 1 1])
+
+                        ;; show image in quad
                         (str/starts-with? id "image")
                         (tmap)
+
+                        ;; show color in quad
                         (str/starts-with? id "color")
                         (let [rem (subs id 8)
                               r (js/parseInt (subs rem 0 2) 16)
@@ -112,9 +102,13 @@
                               b (js/parseInt (subs rem 4 6) 16)
                               a (js/parseInt (subs rem 6 8) 16)]
                           (texmap/setbmp tmap id (bitmap/init 10 10 r g b a)))
+
+                        ;; show glyph
                         (str/starts-with? id "glyph")
                         (let [bmp (bitmap-for-glyph)]
                           (texmap/setbmp tmap id bmp))
+
+                        ;; return empty texmap if unknown
                         :default
                         tmap))]
         (recur (rest ids) newtmap)))))
@@ -134,13 +128,16 @@
   "draw views defined by x y width height and texure requirements." 
 
   (let [newtexids (map :id views)
+
+        ;; generate textures for new views
         newtexmap (tex-gen-for-ids ui-texmap newtexids)
 
+        ;; generate vertex data from views
         vertexes (flatten
                   (map
                    (fn [{:keys [x y wth hth id]}]
-                     (let [[tlx tly brx bry] (texmap/getbmp newtexmap id)]             
-                       (concat
+                     (let [[tlx tly brx bry] (texmap/getbmp newtexmap id)]
+                        (concat
                         [x y] [tlx tly]
                         [(+ x wth) y] [brx tly]
                         [x (+ y hth)] [tlx bry]
@@ -149,39 +146,31 @@
                         [(+ x wth) (+ y hth)] [brx bry]
                         [x (+ y hth)] [tlx bry] ))) views))] 
 
-    (.activeTexture context texture-unit/texture0)
-    (.bindTexture context texture-target/texture-2d ui-texture)
- 
-    ;; upload texturemap if needed 
+    ;; upload texture map if changed
     (if (newtexmap :changed)
-      (do
-        
-         (.texImage2D
-         context
-         texture-target/texture-2d
-         0
-         pixel-format/rgba
-         1024
-         1024
-         0
-         pixel-format/rgba
-         data-type/unsigned-byte
-         (:data (:bitmap newtexmap)))
+      (texture/upload-texture
+       context
+       ui-texture
+       (:data (:bitmap newtexmap))
+       1024
+       1024))
 
-         (.texParameteri context texture-target/texture-2d texture-parameter-name/texture-wrap-s wrap-mode/clamp-to-edge)
-         (.texParameteri context texture-target/texture-2d texture-parameter-name/texture-wrap-t wrap-mode/clamp-to-edge)
-         (.texParameteri context texture-target/texture-2d texture-parameter-name/texture-min-filter texture-filter/linear)
-         (.texParameteri context texture-target/texture-2d texture-parameter-name/texture-mag-filter texture-filter/linear)))
-    
-    (.bindBuffer context
-                 buffer-object/array-buffer
-                 ui-buffer)
-    
-    (.bufferData context
-                 buffer-object/array-buffer
-                 (ta/float32 vertexes)
-                 buffer-object/dynamic-draw)
-    
+    ;; upload buffer 
+    (buffers/upload-buffer
+     context ui-buffer
+     (arrays/float32 vertexes)
+     buffer-object/array-buffer
+     buffer-object/dynamic-draw)
+
+    ;; clear canvas
+    (buffers/clear-color-buffer
+     context
+     0.1
+     0.1
+     0.4
+     1.0)
+
+    ;; draw vertexes
     (buffers/draw!
      context
      :count (/ (count vertexes) 4)
@@ -205,7 +194,11 @@
                  :values projection}
                 {:name "texture_main"
                  :type :sampler-2d
-                 :values 0}
-                ])
+                 :values 0}]
+     :capabilities {capability/blend true}
+     :blend-function [[blend/src-alpha blend/one-minus-src-alpha]]
+     :textures [{:texture ui-texture 
+                :name "texture_main"
+                :texture-unit texture-unit/texture0}])
 
     (assoc state :ui-texmap (assoc newtexmap :changed false))))

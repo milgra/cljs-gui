@@ -47,5 +47,5 @@
 
      0.0
      0.0
-     (/ (* 2.0 farz nearz) (0 nearz farz))
+     (/ (* 2.0 farz nearz) (- nearz farz))
      0.0] ))
