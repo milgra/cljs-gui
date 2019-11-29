@@ -18,7 +18,8 @@
 
 (defn setbmp [{:keys [bitmap contents rowx rowy rowh] :as texmap}
               id
-              {:keys [data width height] :as newbmp}]
+              {:keys [data width height] :as newbmp}
+              inset]
 
   (let [newy (if (> (+ rowx width) (bitmap :width))
                rowh
@@ -32,10 +33,10 @@
 
         newh  (+ newy height)
 
-        newtlx (/ newx (bitmap :width))
-        newtly (/ newy (bitmap :height))
-        newbrx (/ neww (bitmap :width))
-        newbry (/ newh (bitmap :height))
+        newtlx (/ (+ newx inset) (bitmap :width))
+        newtly (/ (+ newy inset) (bitmap :height))
+        newbrx (/ (- neww inset) (bitmap :width))
+        newbry (/ (- newh inset) (bitmap :height))
         
         over? (or (> neww (bitmap :width)) (> newh (bitmap :height)))]
     

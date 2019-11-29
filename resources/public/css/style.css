@@ -1,7 +1,7 @@
 /* some style */
 
 .canvas-main {
-    background-color: white;
+    background-color: rgba(0,0,0,0);
     display: block;
     position: absolute;
     top: 0;
@@ -13,7 +13,7 @@
 }
 
 .canvas-temp {
-    background-color: white;
+    background-color: gray;
     display: block;
     position: absolute;
     top: 0;

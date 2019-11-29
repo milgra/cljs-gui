@@ -35,7 +35,7 @@
 }")
 
 (defn init []
-  (let [context (context/get-context (.getElementById js/document "main"))
+  (let [context (context/get-context (.getElementById js/document "main") {:premultiplied-alpha false :alpha false})
 
         ui-shader (shaders/create-program
                    context
@@ -63,20 +63,29 @@
      :ui-location-texcoord ui-location-texcoord}))
 
 
-(defn width-for-glyph [height text]
-
-  )
-
-(defn bitmap-for-glyph [height text]
-  (let [context (.getContext (. js/document getElementById "temp") "2d" )]
+(defn sizes-for-glyph [text height]
+  (let [context (.getContext (. js/document getElementById "temp") "2d" )
+        itemhth (* height 1.2)]
     (set! (.-font context) (str height "px Cantarell"))
     (set! (.-fillStyle context) "#000000")
     (set! (.-textBaseline context) "middle")
+    {:width (int (.-width (.measureText context text)))
+     :height (int itemhth)}))
+
+
+(defn bitmap-for-glyph [height text]
+  (let [canvas (. js/document getElementById "temp")
+        context (.getContext canvas "2d")
+        itemhth (int (* height 1.2))]
+    (set! (.-font context) (str height "px Cantarell"))
+    (set! (.-fillStyle context) "#000000")
+    (set! (.-textBaseline context) "middle")
+    (.clearRect context 0 0 (.-width canvas) (.-height canvas)) 
     (let [width (int (.-width (.measureText context text)))]
-      (.fillText context text 0 (/ height 2))
-      {:data (.-data (.getImageData context 0 0 width height))
+      (.fillText context text 0 (/ itemhth 2))
+      {:data (.-data (.getImageData context 0 0 width itemhth))
        :width width
-       :height height})))
+       :height itemhth})))
 
 
 (defn tex-gen-for-ids [ui-texmap texids]
@@ -105,12 +114,13 @@
                               g (js/parseInt (subs rem 2 4) 16)
                               b (js/parseInt (subs rem 4 6) 16)
                               a (js/parseInt (subs rem 6 8) 16)]
-                          (texmap/setbmp tmap id (bitmap/init 10 10 r g b a)))
+                          (texmap/setbmp tmap id (bitmap/init 10 10 r g b a) 1))
 
                         ;; show glyph
                         (str/starts-with? id "glyph")
-                        (let [bmp (bitmap-for-glyph 50 "Milcsike")]
-                          (texmap/setbmp tmap id bmp))
+                        (let [arg (str/split id #"%")
+                              bmp (bitmap-for-glyph (js/parseInt (arg 1)) (arg 2))]
+                          (texmap/setbmp tmap id bmp 0))
 
                         ;; return empty texmap if unknown
                         :default

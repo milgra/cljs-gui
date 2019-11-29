@@ -55,8 +55,12 @@
                   :font-file "font.png"
                   :keypresses {}}
 
-       label (ui/get-label-glyphs "Karoly Kiraly") ]
+       label1 (ui/label 10.0 10.0 200.0 50.0 "Károly Király" 35.0)
+       label2 (ui/label 10.0 200.0 250.0 50.0 "Gróf Lyukasgeci" 35.0)
+       labels (concat label1 label2)]
 
+    (println labels)
+    
     ;; key listeners
 
     (events/listen
@@ -80,7 +84,7 @@
     (load-image! imagechannel (:font-file initstate))
     
     ;; runloop
-    
+
     (animate
      initstate
      (fn [state frame time]         
@@ -99,17 +103,7 @@
              
              newglstate (webgl/draw! (:glstate state) 
                                      projection
-                                     [
-                                      {:x 40.0 :y 120.0
-                                       :wth 191.0 :hth 40.0
-                                       :id "color 0xFFFFFFFF"}
-                                      {:x 40.0 :y 120.0
-                                       :wth 191.0 :hth 40.0
-                                       :id "glyph H"}
-                                      {:x 30.0 :y 260.0
-                                       :wth 400.0 :hth 400.0
-                                       :id "debug"}
-                                      ])]
+                                     labels)]
 
          (assoc state :glstate newglstate))))))
 
