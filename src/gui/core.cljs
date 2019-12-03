@@ -55,6 +55,57 @@
                   :font-file "font.png"
                   :keypresses {}}
 
+       hudlayout
+;; CL Class TE text BC back color FC fore color WI width HE height
+;; TA top BA bottom LA left RA right HA horizontal VA vertical align
+;; 0 : edges or screen"
+"
+L             M|
+               |
+P              |
+BD           LR|
+KG    HSP     D|
+L CLIndicator TELevel BCFFFFFF55 FCFFFFFFFF TA0 LA0 WI150 HE50
+M CLButton TEMenu BCFFFFFF55 FCFFFFFFFF TA0 RA0 WI150 HE50
+P CLButton TEPunch BCFFFFFF55 FCFFFFFFFF BAB LA0 WI100 HE100
+B CLButton TEBlock BCFFFFFF55 FCFFFFFFFF BAK LA0 WI100 HE100
+K CLButton TEKick BCFFFFFF55 FCFFFFFFFF BA0 LA0 WI100 HE100
+D CLButton TEDown BCFFFFFF55 FCFFFFFFFF VAB LAB WI100 HE100
+G CLButton TEGun BCFFFFFF55 FCFFFFFFFF BA0 LAK WI100 HE100
+H CLIndicator TEHealth BCFFFFFF55 FCFFFFFFFF BA0 RAS WI200 HE50
+S CLLabel TEBullets BCFFFFFF55 FCFFFFFFFF BA0 HA0 WI50 HE50
+P CLIndicator TEPower BCFFFFFF55 FCFFFFFFFF BA0 LAS WI200 HE50
+L CLButton TELeft BCFFFFFF55 FCFFFFFFFF VAR RAR WI100 HE100
+R CLButton TERight BCFFFFFF55 FCFFFFFFFF BAD RA0 WI100 HE100
+D CLButton TEDown BCFFFFFF55 FCFFFFFFFF BA0 RA0 WI100 HE100
+"
+       
+       menulayout
+"
+ C |
+ N |
+ O |
+ D |
+C CLButton TEContinue BCFFFFFF55 FCFFFFFFFF BAN HA0 WI150 HE50
+N CLButton TENew~Game BCFFFFFF55 FCFFFFFFFF BA0 HA0 WI150 HE50
+O CLButton TEOptions BCFFFFFF55 FCFFFFFFFF VA0 HA0 WI150 HE50
+D CLButton TEDonate BCFFFFFF55 FCFFFFFFFF TAO HA0 WI150 HE50
+"
+
+       optslayout
+"
+ M |
+ S |
+ A |
+ P |
+ B |
+M CLSlider TEMusic~Volume BCFFFFFF55 FCFFFFFFFF BAS HA0 WI150 HE50
+S CLSlider TESound~Volume BCFFFFFF55 FCFFFFFFFF BAA HA0 WI150 HE50
+A CLSlider TEControls~Alpha BCFFFFFF55 FCFFFFFFFF VA0 HA0 WI150 HE50
+P CLToggle TEShow/Hide~Physics BCFFFFFF55 FCFFFFFFFF TAA HA0 WI150 HE50
+B CLButton TEBack BCFFFFFF55 FCFFFFFFFF TAP HA0 WI150 HE50
+"
+       
        label1 (ui/label 10.0 10.0 200.0 50.0 "Károly Király" 35.0)
        label2 (ui/label 10.0 200.0 250.0 50.0 "Gróf Lyukasgeci" 35.0)
        labels (concat label1 label2)]

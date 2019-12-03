@@ -9,7 +9,7 @@
       :y y
       :wth w
       :hth h
-      :id (str "color 0x999999FF") }
+      :id (str "color 0xFFFFFF99") }
      {:x (+ x (/ (- w lw) 2))
       :y (+ y (/ (- h lh) 2))
       :wth lw
