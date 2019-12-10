@@ -60,12 +60,12 @@
 ;; TA top BA bottom LA left RA right HA horizontal VA vertical align
 ;; 0 : edges or screen"
 "
-L             M|
+X             M|
                |
 P              |
 BD           LR|
 KG    HSP     D|
-L CLIndicator TELevel BCFFFFFF55 FCFFFFFFFF TA0 LA0 WI150 HE50
+X CLIndicator TELevel BCFFFFFF55 FCFFFFFFFF TA0 LA0 WI150 HE50
 M CLButton TEMenu BCFFFFFF55 FCFFFFFFFF TA0 RA0 WI150 HE50
 P CLButton TEPunch BCFFFFFF55 FCFFFFFFFF BAB LA0 WI100 HE100
 B CLButton TEBlock BCFFFFFF55 FCFFFFFFFF BAK LA0 WI100 HE100
@@ -107,10 +107,14 @@ B CLButton TEBack BCFFFFFF55 FCFFFFFFFF TAP HA0 WI150 HE50
 "
        
        label1 (ui/label 10.0 10.0 200.0 50.0 "Károly Király" 35.0)
-       label2 (ui/label 10.0 200.0 250.0 50.0 "Gróf Lyukasgeci" 35.0)
-       labels (concat label1 label2)]
+       label2 (ui/label 10.0 200.0 250.0 50.0 "Gróf Lyukas" 35.0)
+       labels (concat label1 label2)
 
-    (println labels)
+       nlabels (ui/generate menulayout)
+       ]
+
+    (println "labels" labels)
+    (println "nlabels" nlabels)
     
     ;; key listeners
 
