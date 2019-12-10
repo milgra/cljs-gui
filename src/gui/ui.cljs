@@ -6,16 +6,18 @@
 
 (defn label [x y w h text size]
   (let [{lw :width lh :height} (webgl/sizes-for-glyph text size)]
-    [{:x x
-      :y y
-      :wth w
-      :hth h
-      :id (str "color 0xFFFFFF99") }
-     {:x (+ x (/ (- w lw) 2))
-      :y (+ y (/ (- h lh) 2))
-      :wth lw
-      :hth lh
-      :id (str "glyph%" size "%" text)}
+    [{:X x
+      :Y y
+      :WI w
+      :HE h
+      :TX "Color 0xFFFFFF99"}
+     {:X (+ x (/ (- w lw) 2))
+      :Y (+ y (/ (- h lh) 2))
+      :WI lw
+      :HE lh
+      :TE text
+      :TX (str "Glyph " size "%" text) 
+      }
      ]))
 
 
@@ -42,9 +44,9 @@
                          (str/starts-with? word "CL")
                          (assoc result :CL (subs word 2))
                          (str/starts-with? word "BC")
-                         (assoc result :BC (js/parseInt (subs word 2) 16))
+                         (assoc result :BC (subs word 2))
                          (str/starts-with? word "FC")
-                         (assoc result :FC (js/parseInt (subs word 2) 16))
+                         (assoc result :FC (subs word 2))
                          (str/starts-with? word "WI")
                          (assoc result :WI (js/parseInt (subs word 2) 10))
                          (str/starts-with? word "HE")
@@ -60,9 +62,13 @@
                          result)
                        )
                      {}
-                     words)]
-           (conj descarray desc))
+                     words)
+               descf (-> desc
+                         (assoc :X 0)
+                         (assoc :Y 0)
+                         (assoc :TX (str "Color " (desc :BC))))
+               ]
+           (conj descarray descf))
          descarray))
      []
      lines)))
-  

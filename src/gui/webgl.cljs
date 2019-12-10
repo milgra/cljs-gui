@@ -88,44 +88,44 @@
        :height itemhth})))
 
 
-(defn tex-gen-for-ids [ui-texmap texids]
+(defn tex-gen-for-ids [ui-texmap views]
   "generates textures for descriptor"
-  (loop [ids texids
+  (loop [remviews views
          tmap ui-texmap]
-    (if (empty? ids)
+    (if (empty? remviews)
       tmap
-      (let [id (first ids)
-            newtmap (if (texmap/hasbmp? tmap id)
+      (let [{:keys [TX TE] :as view} (first remviews)
+            newtmap (if (texmap/hasbmp? tmap TX)
                       tmap
                       (cond
                         
                         ;; show full texture in quad
-                        (str/starts-with? id "debug")
-                        (assoc-in tmap [:contents id] [0 0 1 1])
+                        (str/starts-with? TX "Debug")
+                        (assoc-in tmap [:contents TX] [0 0 1 1])
 
                         ;; show image in quad
-                        (str/starts-with? id "image")
+                        (str/starts-with? TX "Image")
                         (tmap)
 
                         ;; show color in quad
-                        (str/starts-with? id "color")
-                        (let [rem (subs id 8)
+                        (str/starts-with? TX "Color")
+                        (let [rem (subs TX 8)
                               r (js/parseInt (subs rem 0 2) 16)
                               g (js/parseInt (subs rem 2 4) 16)
                               b (js/parseInt (subs rem 4 6) 16)
                               a (js/parseInt (subs rem 6 8) 16)]
-                          (texmap/setbmp tmap id (bitmap/init 10 10 r g b a) 1))
+                          (texmap/setbmp tmap TX (bitmap/init 10 10 r g b a) 1))
 
                         ;; show glyph
-                        (str/starts-with? id "glyph")
-                        (let [arg (str/split id #"%")
-                              bmp (bitmap-for-glyph (js/parseInt (arg 1)) (arg 2))]
-                          (texmap/setbmp tmap id bmp 0))
+                        (str/starts-with? TX "Glyph")
+                        (let [arg (str/split (subs TX 5) #"%")
+                              bmp (bitmap-for-glyph (js/parseInt (arg 0)) (arg 1))]
+                          (texmap/setbmp tmap TX bmp 0))
 
                         ;; return empty texmap if unknown
                         :default
                         tmap))]
-        (recur (rest ids) newtmap)))))
+        (recur (rest remviews) newtmap)))))
 
 
 (defn draw! [{:keys [context
@@ -141,24 +141,22 @@
 
   "draw views defined by x y width height and texure requirements." 
 
-  (let [newtexids (map :id views)
-
-        ;; generate textures for new views
-        newtexmap (tex-gen-for-ids ui-texmap newtexids)
+  (let [;; generate textures for new views
+        newtexmap (tex-gen-for-ids ui-texmap views)
 
         ;; generate vertex data from views
         vertexes (flatten
                   (map
-                   (fn [{:keys [x y wth hth id]}]
-                     (let [[tlx tly brx bry] (texmap/getbmp newtexmap id)]
+                   (fn [{:keys [X Y WI HE TX] :as view}]
+                     (let [[tlx tly brx bry] (texmap/getbmp newtexmap TX)]
                         (concat
-                        [x y] [tlx tly]
-                        [(+ x wth) y] [brx tly]
-                        [x (+ y hth)] [tlx bry]
+                        [X Y] [tlx tly]
+                        [(+ X WI) Y] [brx tly]
+                        [X (+ Y HE)] [tlx bry]
                         
-                        [(+ x wth) y] [brx tly]
-                        [(+ x wth) (+ y hth)] [brx bry]
-                        [x (+ y hth)] [tlx bry] ))) views))] 
+                        [(+ X WI) Y] [brx tly]
+                        [(+ X WI) (+ Y HE)] [brx bry]
+                        [X (+ Y HE)] [tlx bry] ))) views))]
 
     ;; upload texture map if changed
     (if (newtexmap :changed)
