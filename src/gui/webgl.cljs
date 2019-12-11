@@ -94,33 +94,33 @@
          tmap ui-texmap]
     (if (empty? remviews)
       tmap
-      (let [{:keys [TX TE] :as view} (first remviews)
-            newtmap (if (texmap/hasbmp? tmap TX)
+      (let [{:keys [tx te] :as view} (first remviews)
+            newtmap (if (texmap/hasbmp? tmap tx)
                       tmap
                       (cond
                         
                         ;; show full texture in quad
-                        (str/starts-with? TX "Debug")
-                        (assoc-in tmap [:contents TX] [0 0 1 1])
+                        (str/starts-with? tx "Debug")
+                        (assoc-in tmap [:contents tx] [0 0 1 1])
 
                         ;; show image in quad
-                        (str/starts-with? TX "Image")
+                        (str/starts-with? tx "Image")
                         (tmap)
 
                         ;; show color in quad
-                        (str/starts-with? TX "Color")
-                        (let [rem (subs TX 8)
+                        (str/starts-with? tx "Color")
+                        (let [rem (subs tx 8)
                               r (js/parseInt (subs rem 0 2) 16)
                               g (js/parseInt (subs rem 2 4) 16)
                               b (js/parseInt (subs rem 4 6) 16)
                               a (js/parseInt (subs rem 6 8) 16)]
-                          (texmap/setbmp tmap TX (bitmap/init 10 10 r g b a) 1))
+                          (texmap/setbmp tmap tx (bitmap/init 10 10 r g b a) 1))
 
                         ;; show glyph
-                        (str/starts-with? TX "Glyph")
-                        (let [arg (str/split (subs TX 5) #"%")
+                        (str/starts-with? tx "Glyph")
+                        (let [arg (str/split (subs tx 5) #"%")
                               bmp (bitmap-for-glyph (js/parseInt (arg 0)) (arg 1))]
-                          (texmap/setbmp tmap TX bmp 0))
+                          (texmap/setbmp tmap tx bmp 0))
 
                         ;; return empty texmap if unknown
                         :default
@@ -147,16 +147,16 @@
         ;; generate vertex data from views
         vertexes (flatten
                   (map
-                   (fn [{:keys [X Y WI HE TX] :as view}]
-                     (let [[tlx tly brx bry] (texmap/getbmp newtexmap TX)]
+                   (fn [{:keys [x y w h tx] :as view}]
+                     (let [[tlx tly brx bry] (texmap/getbmp newtexmap tx)]
                         (concat
-                        [X Y] [tlx tly]
-                        [(+ X WI) Y] [brx tly]
-                        [X (+ Y HE)] [tlx bry]
+                        [x y] [tlx tly]
+                        [(+ x w) y] [brx tly]
+                        [x (+ y h)] [tlx bry]
                         
-                        [(+ X WI) Y] [brx tly]
-                        [(+ X WI) (+ Y HE)] [brx bry]
-                        [X (+ Y HE)] [tlx bry] ))) views))]
+                        [(+ x w) y] [brx tly]
+                        [(+ x w) (+ y h)] [brx bry]
+                        [x (+ y h)] [tlx bry] ))) views))]
 
     ;; upload texture map if changed
     (if (newtexmap :changed)
