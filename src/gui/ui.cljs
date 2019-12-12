@@ -18,57 +18,48 @@
       :te text
       :tx (str "Glyph " size "%" text)}]))
 
+
+(defn gen-view [class width height color]
+  {:x 0
+   :y 0
+   :w width
+   :h height
+   :cl class
+   :tx (str "Color 0x" color)})
+
+
+(defn add-align [view ta ba la ra ha va]
+  (-> view
+      (assoc :ta ta)
+      (assoc :ba ba)
+      (assoc :la la)
+      (assoc :ra ra)
+      (assoc :ha ha)
+      (assoc :va va)))
+
+
 ;;C CLButton TEContinue BCFFFFFF55 FCFFFFFFFF BAN HA0 WI150 HE50
 ;;N CLButton TENew~Game BCFFFFFF55 FCFFFFFFFF BA0 HA0 WI150 HE50
 ;;O CLButton TEOptions BCFFFFFF55 FCFFFFFFFF VA0 HA0 WI150 HE50
 ;;D CLButton TEDonate BCFFFFFF55 FCFFFFFFFF TAO HA0 WI150 HE50
 
 
-(defn gen-view-from-desc [desc]
-  (let [words (str/split desc #" ")
-        desc (reduce
-              (fn [result word]
-                ;; analyze word, add extracted properties to final strucure
-                (cond
-                  (= (count word) 1)
-                  (assoc result :id word)
-                  (str/starts-with? word "TE")
-                  (assoc result :te (subs word 2))
-                  (str/starts-with? word "CL")
-                  (assoc result :cl (subs word 2))
-                  (str/starts-with? word "BC")
-                  (assoc result :bc (subs word 2))
-                  (str/starts-with? word "FC")
-                  (assoc result :fc (subs word 2))
-                  (str/starts-with? word "WI")
-                  (assoc result :w (js/parseInt (subs word 2) 10))
-                  (str/starts-with? word "HE")
-                  (assoc result :h (js/parseInt (subs word 2) 10))
-                  (or (str/starts-with? word "TA")
-                      (str/starts-with? word "BA")
-                      (str/starts-with? word "LA")
-                      (str/starts-with? word "RA")
-                      (str/starts-with? word "VA")
-                      (str/starts-with? word "HA"))
-                  (assoc result (keyword (str/lower-case (subs word 0 2))) (subs word 2)) 
-                  :default
-                  result)
-                )
-              {}
-              words)
-        descf (-> desc
-                  (assoc :x 0)
-                  (assoc :y 0)
-                  (assoc :tx (str "Color 0x" (desc :bc))))]
-    descf))
-
-
-(defn gen-view [width height color]
-  {:x 0
-   :y 0
-   :w width
-   :h height
-   :tx (str "Color " color)})
+(defn parse-desc [desc]
+  (let [words (str/split desc #" ")]
+        (reduce
+         (fn [result word]
+           ;; analyze word, add extracted properties to final strucure
+           (cond
+             (= (count word) 1)
+             (assoc result :id word)
+             (str/starts-with? word "WI")
+             (assoc result :w (js/parseInt (subs word 2) 10))
+             (str/starts-with? word "HE")
+             (assoc result :h (js/parseInt (subs word 2) 10))
+             :default
+             (assoc result (keyword (str/lower-case (subs word 0 2))) (subs word 2))))
+         {}
+         words)))
 
 
 (defn gen-label [text size]
@@ -86,14 +77,35 @@
 (defn gen-from-desc [desc]
   (let [lines (str/split-lines desc)]
     (reduce
-     (fn [descarray line]
+     (fn [views line]
        ;; analyze lines, convert to view if not ends with |
        (if-not (or (= (count line) 0) (str/ends-with? line "|"))
-         (let [descf (gen-view-from-desc line)]
-           (conj descarray descf))
-         descarray))
+         (let [desc (parse-desc line)
+               view (-> (gen-view (desc :cl) (desc :w) (desc :h) (desc :bc))
+                        (add-align (desc :ta) (desc :ba) (desc :la) (desc :ra) (desc :ha) (desc :va)))]
+           (cond-> views
+             true (conj view)
+             (not= (desc :te) nil) (conj (gen-label (desc :te) 40))))
+         views))
      []
      lines)))
+
+
+(defn get-view [views id]
+
+  )
+
+
+(defn align-view [views id width height]
+  (let [{:keys [x y w h ta ba la ra va ha]} view
+        taview (get-view views ta)
+        baview (get-view views ba)
+        laview (get-view views la)
+        raview (get-view views ra)
+        haview (get-view views ha)
+        vaview (get-view views va)])
+  views
+  )
 
 
 (defn align [views width height]
