@@ -96,6 +96,10 @@
 (defn get-view [views id]
   (first (filter (fn [view] (= (view :id) id)) views)))
 
+(defn get-index [views id]
+  (first (remove nil? (keep-indexed #(if (= (%2 :id) id)
+                   %1
+                   nil) views))))
 
 (defn align-view [views id width height]
   (let [view (get-view views id)
@@ -105,50 +109,55 @@
         laview (get-view views la)
         raview (get-view views ra)
         haview (get-view views ha)
-        vaview (get-view views va)]
-    (println "aligning" view)
-    (-> view
-        (assoc :x (cond
-                    ;; align to view on the left or to screen edge
-                    (not= la nil)
-                    (if (= la "0")
+        vaview (get-view views va)
+        newview (-> view
+            (assoc :x (cond
+                        ;; align to view on the left or to screen edge
+                        (not= la nil)
+                        (if (= la "0")
                       0
                       (+ (laview :x) (laview :w)))
-                    ;; align to view on the right or to screen edge
-                    (not= ra nil)
-                    (if (= ra "0")
-                      (- width w)
-                      (- (raview :x) w))
-                    ;; align to horizontal center or between left align and right align view
-                    (not= ha nil)
-                    (if (= ha "0")
-                      (- (/ width 2) (/ w 2))
-                      (- (- (laview :x) (/ (- (raview :x)(+ (laview :x)(laview :w))) 2) ) (/ w 2)))
-                    ;; or leave x position as is
-                    :default
+                        ;; align to view on the right or to screen edge
+                        (not= ra nil)
+                        (if (= ra "0")
+                          (- width w)
+                          (- (raview :x) w))
+                        ;; align to horizontal center or between left align and right align view
+                        (not= ha nil)
+                        (if (= ha "0")
+                          (- (/ width 2) (/ w 2))
+                          (- (- (laview :x) (/ (- (raview :x)(+ (laview :x)(laview :w))) 2) ) (/ w 2)))
+                        ;; or leave x position as is
+                        :default
                     x))
-        (assoc :y (cond
-                    ;; align to view on the top or to screen edge
-                    (not= ta nil)
-                    (if (= ta "0")
-                      0
-                      (+ (taview :y)(taview :h)))
-                    ;; align to view on the bottom or to screen edge
-                    (not= ba nil)
-                    (if (= ba "0")
-                      (- height h)
-                      (- (baview :y) h))
-                    ;; align to vertical center or between bottom and top align view
-                    (not= va nil)
-                    (if (= va "0")
-                      (- (/ height 2) (/ h 2))
+            (assoc :y (cond
+                        ;; align to view on the top or to screen edge
+                        (not= ta nil)
+                        (if (= ta "0")
+                          0
+                          (+ (taview :y)(taview :h)))
+                        ;; align to view on the bottom or to screen edge
+                        (not= ba nil)
+                        (if (= ba "0")
+                          (- height h)
+                          (- (baview :y) h))
+                        ;; align to vertical center or between bottom and top align view
+                        (not= va nil)
+                        (if (= va "0")
+                          (- (/ height 2) (/ h 2))
                       (- (- (baview :y) (/ (- (baview :y)(+ (taview :y)(taview :h))) 2 )) (/ h 2)))
-                    :default
-                    y)))))
+                        :default
+                        y)))]
+    (println "aligning" (view :id) ta ba la ra ha va newview)
+    newview
+    ))
 
 
 (defn align [views width height]
   "iterate through all views and align them based on their alignment switches"
-  (map (fn [ view ]
-         (align-view views (view :id) width height))
-       views))
+  (reduce (fn [result view]
+            (let [index (get-index views (view :id))
+                  newview (align-view result (view :id) width height)]
+              (assoc result index newview)))
+          views
+          views))
