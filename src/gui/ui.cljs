@@ -19,8 +19,9 @@
       :tx (str "Glyph " size "%" text)}]))
 
 
-(defn gen-view [class width height color]
-  {:x 0
+(defn gen-view [id class width height color]
+  {:id id
+   :x 0
    :y 0
    :w width
    :h height
@@ -64,7 +65,8 @@
 
 (defn gen-label [text size]
   (let [{lw :width lh :height} (webgl/sizes-for-glyph text size)]
-    {:x 0
+    {:id (str (rand-int 100))
+     :x 0
      :y 0
      :w lw
      :h lh
@@ -81,7 +83,7 @@
        ;; analyze lines, convert to view if not ends with |
        (if-not (or (= (count line) 0) (str/ends-with? line "|"))
          (let [desc (parse-desc line)
-               view (-> (gen-view (desc :cl) (desc :w) (desc :h) (desc :bc))
+               view (-> (gen-view (desc :id) (desc :cl) (desc :w) (desc :h) (desc :bc))
                         (add-align (desc :ta) (desc :ba) (desc :la) (desc :ra) (desc :ha) (desc :va)))]
            (cond-> views
              true (conj view)
@@ -92,42 +94,61 @@
 
 
 (defn get-view [views id]
-
-  )
+  (first (filter (fn [view] (= (view :id) id)) views)))
 
 
 (defn align-view [views id width height]
-  (let [{:keys [x y w h ta ba la ra va ha]} view
+  (let [view (get-view views id)
+        {:keys [x y w h ta ba la ra va ha]} view
         taview (get-view views ta)
         baview (get-view views ba)
         laview (get-view views la)
         raview (get-view views ra)
         haview (get-view views ha)
-        vaview (get-view views va)])
-  views
-  )
+        vaview (get-view views va)]
+    (println "aligning" view)
+    (-> view
+        (assoc :x (cond
+                    ;; align to view on the left or to screen edge
+                    (not= la nil)
+                    (if (= la "0")
+                      0
+                      (+ (laview :x) (laview :w)))
+                    ;; align to view on the right or to screen edge
+                    (not= ra nil)
+                    (if (= ra "0")
+                      (- width w)
+                      (- (raview :x) w))
+                    ;; align to horizontal center or between left align and right align view
+                    (not= ha nil)
+                    (if (= ha "0")
+                      (- (/ width 2) (/ w 2))
+                      (- (- (laview :x) (/ (- (raview :x)(+ (laview :x)(laview :w))) 2) ) (/ w 2)))
+                    ;; or leave x position as is
+                    :default
+                    x))
+        (assoc :y (cond
+                    ;; align to view on the top or to screen edge
+                    (not= ta nil)
+                    (if (= ta "0")
+                      0
+                      (+ (taview :y)(taview :h)))
+                    ;; align to view on the bottom or to screen edge
+                    (not= ba nil)
+                    (if (= ba "0")
+                      (- height h)
+                      (- (baview :y) h))
+                    ;; align to vertical center or between bottom and top align view
+                    (not= va nil)
+                    (if (= va "0")
+                      (- (/ height 2) (/ h 2))
+                      (- (- (baview :y) (/ (- (baview :y)(+ (taview :y)(taview :h))) 2 )) (/ h 2)))
+                    :default
+                    y)))))
 
 
 (defn align [views width height]
   "iterate through all views and align them based on their alignment switches"
-  (map (fn [{:keys [x y w h ta ba la ra va ha] :as view}]
-         (-> view
-             (assoc :x (cond
-                         (= la "0")
-                         0
-                         (= ra "0")
-                         (- width w)
-                         (= ha "0")
-                         (- (/ width 2) (/ w 2))
-                         :default
-                         x))
-             (assoc :y (cond
-                         (= ta "0")
-                         0
-                         (= ba "0")
-                         (- height h)
-                         (= va "0")
-                         (- (/ height 2) (/ h 2))
-                         :default
-                         y))))
+  (map (fn [ view ]
+         (align-view views (view :id) width height))
        views))
