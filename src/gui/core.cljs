@@ -110,11 +110,13 @@ B CLButton TEBack BCFFFFFF55 FCFFFFFFFF TAP HA0 WI150 HE50
        label2 (ui/label 10.0 200.0 250.0 50.0 "Gróf Lyukas" 35.0)
        labels (concat label1 label2)
 
-       nlabels (ui/align (ui/gen-from-desc menulayout)  (. js/window -innerWidth)  (. js/window -innerHeight) )
+       ui (ui/gen-from-desc menulayout)
+       views (map (ui :viewmap) (ui :views))
+       ;;nlabels (ui/align (ui/gen-from-desc menulayout)  (. js/window -innerWidth)  (. js/window -innerHeight) )
        ]
 
     (println "labels" labels)
-    (println "nlabels" nlabels)
+    (println "views" views)
     
     ;; key listeners
 
@@ -158,7 +160,7 @@ B CLButton TEBack BCFFFFFF55 FCFFFFFFFF TAP HA0 WI150 HE50
              
              newglstate (webgl/draw! (:glstate state) 
                                      projection
-                                     nlabels)]
+                                     views)]
 
          (assoc state :glstate newglstate))))))
 

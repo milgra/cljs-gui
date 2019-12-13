@@ -4,6 +4,13 @@
             [gui.webgl :as webgl]
             [clojure.string :as str]))
 
+
+(defn gen-hash [n]
+   (let [chars (map char (concat (range 48 57) (range 65 90) (range 97 122)))
+         password (take n (repeatedly #(rand-nth chars)))]
+     (reduce str password)))
+
+
 (defn label [x y w h text size]
   (let [{lw :width lh :height} (webgl/sizes-for-glyph text size)]
     [{:x x
@@ -19,13 +26,15 @@
       :tx (str "Glyph " size "%" text)}]))
 
 
-(defn gen-view [id class width height color]
-  {:id id
+(defn gen-view [id name class width height color]
+  (println "gen-view" id name class width height color)
+  {:cl class
+   :id id
+   :na name
    :x 0
    :y 0
    :w width
    :h height
-   :cl class
    :tx (str "Color 0x" color)})
 
 
@@ -65,7 +74,9 @@
 
 (defn gen-label [text size]
   (let [{lw :width lh :height} (webgl/sizes-for-glyph text size)]
-    {:id (str (rand-int 100))
+    {:cl "Label"
+     :id (keyword (gen-hash 8))
+     :na ""
      :x 0
      :y 0
      :w lw
@@ -76,20 +87,30 @@
      :va "0"}))
 
 
+(defn add-view [{:keys [viewmap views] :as ui} view]
+  (let [newviews (conj views (view :id))
+        newviewmap (assoc viewmap (view :id) view)]
+    (-> ui
+        (assoc :viewmap newviewmap)
+        (assoc :views newviews))))
+
+
 (defn gen-from-desc [desc]
   (let [lines (str/split-lines desc)]
     (reduce
-     (fn [views line]
+     (fn [{:keys [viewmap views] :as ui} line]
        ;; analyze lines, convert to view if not ends with |
        (if-not (or (= (count line) 0) (str/ends-with? line "|"))
          (let [desc (parse-desc line)
-               view (-> (gen-view (desc :id) (desc :cl) (desc :w) (desc :h) (desc :bc))
-                        (add-align (desc :ta) (desc :ba) (desc :la) (desc :ra) (desc :ha) (desc :va)))]
-           (cond-> views
-             true (conj view)
-             (not= (desc :te) nil) (conj (gen-label (desc :te) 40))))
-         views))
-     []
+               hash (keyword (gen-hash 8))
+               view (-> (gen-view hash (desc :id) (desc :cl) (desc :w) (desc :h) (desc :bc))
+                        (add-align (desc :ta) (desc :ba) (desc :la) (desc :ra) (desc :ha) (desc :va)))]           
+           (cond-> ui
+             true (add-view view)
+             (not= (desc :te) nil) (add-view (gen-label (desc :te) 40))))
+         ui))
+     {:viewmap {}
+      :views [] }
      lines)))
 
 
