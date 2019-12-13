@@ -110,13 +110,16 @@ B CLButton TEBack BCFFFFFF55 FCFFFFFFFF TAP HA0 WI150 HE50
        label2 (ui/label 10.0 200.0 250.0 50.0 "Gróf Lyukas" 35.0)
        labels (concat label1 label2)
 
-       ui (ui/gen-from-desc menulayout)
-       views (map (ui :viewmap) (ui :views))
-       ;;nlabels (ui/align (ui/gen-from-desc menulayout)  (. js/window -innerWidth)  (. js/window -innerHeight) )
+       uimap (ui/gen-from-desc menulayout)
+       viewids (ui/collect-visible-ids uimap (uimap :views))
+       views (map (uimap :viewmap) viewids)
+       newviews (ui/align uimap (uimap :views) (. js/window -innerWidth)  (. js/window -innerHeight))
        ]
 
     (println "labels" labels)
+    (println "uimap" uimap)
     (println "views" views)
+    (println "newviews" newviews)
     
     ;; key listeners
 

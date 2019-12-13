@@ -35,7 +35,8 @@
    :y 0
    :w width
    :h height
-   :tx (str "Color 0x" color)})
+   :tx (str "Color 0x" color)
+   :sv []})
 
 
 (defn add-align [view ta ba la ra ha va]
@@ -84,7 +85,8 @@
      :te text
      :tx (str "Glyph " size "%" text)
      :ha "0"
-     :va "0"}))
+     :va "0"
+     :sv []}))
 
 
 (defn add-view [{:keys [viewmap views] :as ui} view]
@@ -94,24 +96,44 @@
         (assoc :viewmap newviewmap)
         (assoc :views newviews))))
 
+(defn add-subview [{subviews :sv :as view} subview]
+  (assoc view :sv (conj subviews (subview :id))))
 
 (defn gen-from-desc [desc]
-  (let [lines (str/split-lines desc)]
-    (reduce
-     (fn [{:keys [viewmap views] :as ui} line]
-       ;; analyze lines, convert to view if not ends with |
-       (if-not (or (= (count line) 0) (str/ends-with? line "|"))
-         (let [desc (parse-desc line)
-               hash (keyword (gen-hash 8))
-               view (-> (gen-view hash (desc :id) (desc :cl) (desc :w) (desc :h) (desc :bc))
-                        (add-align (desc :ta) (desc :ba) (desc :la) (desc :ra) (desc :ha) (desc :va)))]           
-           (cond-> ui
-             true (add-view view)
-             (not= (desc :te) nil) (add-view (gen-label (desc :te) 40))))
-         ui))
-     {:viewmap {}
-      :views [] }
-     lines)))
+  (let [lines (str/split-lines desc)
+        ui (reduce
+            (fn [{:keys [viewmap views] :as ui} line]
+              ;; analyze lines, convert to view if not ends with |
+              (if-not (or (= (count line) 0) (str/ends-with? line "|"))
+                (let [desc (parse-desc line)
+                      hash (keyword (gen-hash 8))
+                      view (-> (gen-view hash (desc :id) (desc :cl) (desc :w) (desc :h) (desc :bc))
+                               (add-align (desc :ta) (desc :ba) (desc :la) (desc :ra) (desc :ha) (desc :va)))
+                      
+                      subview (if (not= (desc :te) nil)
+                                (gen-label (desc :te) 40)
+                                nil)
+                      
+                      newview (if (not= nil subview)
+                                (add-subview view subview)
+                                view)
+                      
+                      newviews (conj views (view :id))
+                      
+                      newviewmap (cond-> viewmap
+                                   true (assoc (newview :id) newview)
+                                   subview (assoc (subview :id) subview))]
+                  (-> ui
+                      (assoc :viewmap newviewmap)
+                      (assoc :views newviews)))
+                ui))
+            {:viewmap {}
+             :views [] }
+            lines)]
+    ;; replace alignment letters with ids
+    ;;(map (fn [] ) (ui :keymap))
+    ui
+    ))
 
 
 (defn get-view [views id]
@@ -122,15 +144,15 @@
                    %1
                    nil) views))))
 
-(defn align-view [views id width height]
-  (let [view (get-view views id)
+(defn align-view [viewmap id width height]
+  (let [view (get viewmap id)
         {:keys [x y w h ta ba la ra va ha]} view
-        taview (get-view views ta)
-        baview (get-view views ba)
-        laview (get-view views la)
-        raview (get-view views ra)
-        haview (get-view views ha)
-        vaview (get-view views va)
+        taview (get viewmap ta)
+        baview (get viewmap ba)
+        laview (get viewmap la)
+        raview (get viewmap ra)
+        haview (get viewmap ha)
+        vaview (get viewmap va)
         newview (-> view
             (assoc :x (cond
                         ;; align to view on the left or to screen edge
@@ -169,16 +191,33 @@
                       (- (- (baview :y) (/ (- (baview :y)(+ (taview :y)(taview :h))) 2 )) (/ h 2)))
                         :default
                         y)))]
-    (println "aligning" (view :id) ta ba la ra ha va newview)
     newview
     ))
 
 
-(defn align [views width height]
+(defn align [ui coll width height]
   "iterate through all views and align them based on their alignment switches"
-  (reduce (fn [result view]
-            (let [index (get-index views (view :id))
-                  newview (align-view result (view :id) width height)]
-              (assoc result index newview)))
-          views
-          views))
+  (println "align" coll)
+  (reduce (fn [oldui id]
+            (println "id" id)
+            (let [view (get (ui :viewmap) id)
+                  {:keys [x y w h ta ba la ra va ha]} view
+                  toalign (filter #(and (not= % nil) (not= % "0")) [ta ba la ra va ha])
+                  ;; first align relative views
+                  newui (align oldui toalign width height)
+                  ;; align self
+                  newview (align-view (newui :viewmap) id width height)
+                  ;; align subviews
+                  ]
+              (assoc-in newui [:viewmap id] newview)
+              ))
+          ui
+          coll))
+
+(defn collect-visible-ids [ui coll]
+  (reduce
+   (fn [res id]
+     (let [view ((ui :viewmap) id)]
+       (concat res (collect-visible-ids ui (view :sv)))))
+   coll
+   coll))
