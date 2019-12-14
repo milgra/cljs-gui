@@ -5,29 +5,15 @@
             [clojure.string :as str]))
 
 
-(defn gen-hash [n]
+(defn gen-id [n]
+  "generates fixed length alfanumeric hash"
    (let [chars (map char (concat (range 48 57) (range 65 90) (range 97 122)))
-         password (take n (repeatedly #(rand-nth chars)))]
-     (reduce str password)))
-
-
-(defn label [x y w h text size]
-  (let [{lw :width lh :height} (webgl/sizes-for-glyph text size)]
-    [{:x x
-      :y y
-      :w w
-      :h h
-      :tx "Color 0xFFFFFF99"}
-     {:x (+ x (/ (- w lw) 2))
-      :y (+ y (/ (- h lh) 2))
-      :w lw
-      :h lh
-      :te text
-      :tx (str "Glyph " size "%" text)}]))
+         id (take n (repeatedly #(rand-nth chars)))]
+     (reduce str id)))
 
 
 (defn gen-view [id name class width height color]
-  (println "gen-view" id name class width height color)
+  "generate basic view with color"
   {:cl class
    :id id
    :na name
@@ -40,6 +26,7 @@
 
 
 (defn add-align [view ta ba la ra ha va]
+  "add alignment properties to view"
   (-> view
       (assoc :ta ta)
       (assoc :ba ba)
@@ -49,34 +36,25 @@
       (assoc :va va)))
 
 
-;;C CLButton TEContinue BCFFFFFF55 FCFFFFFFFF BAN HA0 WI150 HE50
-;;N CLButton TENew~Game BCFFFFFF55 FCFFFFFFFF BA0 HA0 WI150 HE50
-;;O CLButton TEOptions BCFFFFFF55 FCFFFFFFFF VA0 HA0 WI150 HE50
-;;D CLButton TEDonate BCFFFFFF55 FCFFFFFFFF TAO HA0 WI150 HE50
-
-
 (defn parse-desc [desc]
+  "parse view description and create map"
+  "D CLButton TEDonate BCFFFFFF55 FCFFFFFFFF TAO HA0 WI150 HE50"
   (let [words (str/split desc #" ")]
-        (reduce
-         (fn [result word]
-           ;; analyze word, add extracted properties to final strucure
-           (cond
-             (= (count word) 1)
-             (assoc result :id word)
-             (str/starts-with? word "WI")
-             (assoc result :w (js/parseInt (subs word 2) 10))
-             (str/starts-with? word "HE")
-             (assoc result :h (js/parseInt (subs word 2) 10))
-             :default
-             (assoc result (keyword (str/lower-case (subs word 0 2))) (subs word 2))))
-         {}
-         words)))
+    (reduce
+     (fn [result word]
+       (cond
+         (= (count word) 1) (assoc result :id word)
+         (str/starts-with? word "WI") (assoc result :w (js/parseInt (subs word 2) 10))
+         (str/starts-with? word "HE") (assoc result :h (js/parseInt (subs word 2) 10))
+         :default (assoc result (keyword (str/lower-case (subs word 0 2))) (subs word 2))))
+     {}
+     words)))
 
 
 (defn gen-label [text size]
   (let [{lw :width lh :height} (webgl/sizes-for-glyph text size)]
     {:cl "Label"
-     :id (keyword (gen-hash 8))
+     :id (keyword (gen-id 8))
      :na ""
      :x 0
      :y 0
@@ -90,35 +68,71 @@
 
 
 (defn add-view [{:keys [viewmap views] :as ui} view]
+  "adds view to viewmap and views vector"
   (let [newviews (conj views (view :id))
         newviewmap (assoc viewmap (view :id) view)]
     (-> ui
         (assoc :viewmap newviewmap)
         (assoc :views newviews))))
 
+
 (defn add-subview [{subviews :sv :as view} subview]
+  "inserts subview's id to views sv property"
   (assoc view :sv (conj subviews (subview :id))))
 
+
+(defn get-key-for-name [viewmap name]
+  "extract view id from id - view map based on view name"
+  (cond
+    (= name nil) nil
+    (= name "0") "0"
+    :else (when name
+            (let [pick (first (filter #(= ((val %) :na) name) (seq viewmap)))]
+              (when pick (key pick))))))
+
+
+(defn replace-alignment-names [viewmap]
+  "replaces view names with view id's in viewmap's alignment properties"
+  (reduce
+   (fn [oldmap item]
+     (let [{:keys [ta ba la ra va ha]} (val item)]
+       (assoc oldmap (key item)
+              (-> (val item)
+                  (assoc :ta (get-key-for-name oldmap ta))
+                  (assoc :ba (get-key-for-name oldmap ba))
+                  (assoc :la (get-key-for-name oldmap la))
+                  (assoc :ra (get-key-for-name oldmap ra))
+                  (assoc :ha (get-key-for-name oldmap ha))
+                  (assoc :va (get-key-for-name oldmap va))))))
+   viewmap
+   viewmap))
+
+
 (defn gen-from-desc [desc]
+  "generate view structure from description"
+  
   (let [lines (str/split-lines desc)
         ui (reduce
             (fn [{:keys [viewmap views] :as ui} line]
               ;; analyze lines, convert to view if not ends with |
               (if-not (or (= (count line) 0) (str/ends-with? line "|"))
-                (let [desc (parse-desc line)
-                      hash (keyword (gen-hash 8))
-                      view (-> (gen-view hash (desc :id) (desc :cl) (desc :w) (desc :h) (desc :bc))
-                               (add-align (desc :ta) (desc :ba) (desc :la) (desc :ra) (desc :ha) (desc :va)))
+
+                (let [{:keys [id cl w h bc fc ta ba la ra va ha te]} (parse-desc line)
+
+                      hash (keyword (gen-id 8))
+
+                      view (-> (gen-view hash id cl w h bc)
+                               (add-align ta ba la ra ha va))
                       
-                      subview (if (not= (desc :te) nil)
-                                (gen-label (desc :te) 40)
+                      subview (if (not= te nil)
+                                (gen-label te 40)
                                 nil)
                       
                       newview (if (not= nil subview)
                                 (add-subview view subview)
                                 view)
-                      
-                      newviews (conj views (view :id))
+
+                      newviews (conj views hash)
                       
                       newviewmap (cond-> viewmap
                                    true (assoc (newview :id) newview)
@@ -130,21 +144,13 @@
             {:viewmap {}
              :views [] }
             lines)]
+    (println "ui" ui)
     ;; replace alignment letters with ids
-    ;;(map (fn [] ) (ui :keymap))
-    ui
-    ))
+    (assoc ui :viewmap (replace-alignment-names (ui :viewmap)))))
 
-
-(defn get-view [views id]
-  (first (filter (fn [view] (= (view :id) id)) views)))
-
-(defn get-index [views id]
-  (first (remove nil? (keep-indexed #(if (= (%2 :id) id)
-                   %1
-                   nil) views))))
 
 (defn align-view [viewmap id width height]
+  (println "align-view" id)
   (let [view (get viewmap id)
         {:keys [x y w h ta ba la ra va ha]} view
         taview (get viewmap ta)
@@ -191,15 +197,15 @@
                       (- (- (baview :y) (/ (- (baview :y)(+ (taview :y)(taview :h))) 2 )) (/ h 2)))
                         :default
                         y)))]
+    (println "new" newview)
     newview
     ))
 
 
 (defn align [ui coll width height]
   "iterate through all views and align them based on their alignment switches"
-  (println "align" coll)
+  (println "aligncoll" coll)
   (reduce (fn [oldui id]
-            (println "id" id)
             (let [view (get (ui :viewmap) id)
                   {:keys [x y w h ta ba la ra va ha]} view
                   toalign (filter #(and (not= % nil) (not= % "0")) [ta ba la ra va ha])

@@ -86,10 +86,10 @@ D CLButton TEDown BCFFFFFF55 FCFFFFFFFF BA0 RA0 WI100 HE100
  N |
  O |
  D |
-O CLButton TEOptions BC00FFFFFF FCFFFFFFFF VA0 HA0 WI150 HE50
-N CLButton TENew~Game BCFFFF00FF FCFFFFFFFF BAO HA0 WI150 HE50
-D CLButton TEDonate BCFFFFFFFF FCFFFFFFFF TAO HA0 WI150 HE50
 C CLButton TEContinue BCFF00FFFF FCFFFFFFFF BAN HA0 WI150 HE50
+N CLButton TENew~Game BCFFFF00FF FCFFFFFFFF BAO HA0 WI150 HE50
+O CLButton TEOptions BC00FFFFFF FCFFFFFFFF VA0 HA0 WI150 HE50
+D CLButton TEDonate BCFFFFFFFF FCFFFFFFFF TAO HA0 WI150 HE50
 "
 
        optslayout
@@ -106,20 +106,13 @@ P CLToggle TEShow/Hide~Physics BCFFFFFF55 FCFFFFFFFF TAA HA0 WI150 HE50
 B CLButton TEBack BCFFFFFF55 FCFFFFFFFF TAP HA0 WI150 HE50
 "
        
-       label1 (ui/label 10.0 10.0 200.0 50.0 "Károly Király" 35.0)
-       label2 (ui/label 10.0 200.0 250.0 50.0 "Gróf Lyukas" 35.0)
-       labels (concat label1 label2)
-
        uimap (ui/gen-from-desc menulayout)
        viewids (ui/collect-visible-ids uimap (uimap :views))
-       views (map (uimap :viewmap) viewids)
-       newviews (ui/align uimap (uimap :views) (. js/window -innerWidth)  (. js/window -innerHeight))
+       newuimap (ui/align uimap (uimap :views) (. js/window -innerWidth)  (. js/window -innerHeight))
+       views (map (newuimap :viewmap) viewids)
        ]
 
-    (println "labels" labels)
-    (println "uimap" uimap)
     (println "views" views)
-    (println "newviews" newviews)
     
     ;; key listeners
 
