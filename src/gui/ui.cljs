@@ -67,15 +67,6 @@
      :sv []}))
 
 
-(defn add-view [{:keys [viewmap views] :as ui} view]
-  "adds view to viewmap and views vector"
-  (let [newviews (conj views (view :id))
-        newviewmap (assoc viewmap (view :id) view)]
-    (-> ui
-        (assoc :viewmap newviewmap)
-        (assoc :views newviews))))
-
-
 (defn add-subview [{subviews :sv :as view} subview]
   "inserts subview's id to views sv property"
   (assoc view :sv (conj subviews (subview :id))))
@@ -112,41 +103,41 @@
   "generate view structure from description"
   
   (let [lines (str/split-lines desc)
+
+        ;; generate views from descriptions
         ui (reduce
-            (fn [{:keys [viewmap views] :as ui} line]
-              ;; analyze lines, convert to view if not ends with |
+            (fn [{:keys [viewmap views] :as oldui} line]
               (if-not (or (= (count line) 0) (str/ends-with? line "|"))
-
                 (let [{:keys [id cl w h bc fc ta ba la ra va ha te]} (parse-desc line)
+                      view (-> (gen-view (keyword (gen-id 8)) id cl w h bc)
+                               (add-align ta ba la ra ha va)
+                               (assoc :te te))]
+                  (-> oldui
+                      (assoc :viewmap (assoc viewmap (view :id) view))
+                      (assoc :views (conj views (view :id)))))
+                oldui))
+            {:viewmap {} :views [] }
+            lines)
 
-                      hash (keyword (gen-id 8))
+        ;; generate labels for buttons if needed
+        ui1 (reduce
+            (fn [oldui pair]
+              (let [{:keys [id te] :as view} (val pair)]
+                (if te
+                  (let [newview (gen-label te 40)]
+                    (-> oldui
+                        (assoc-in [:viewmap id] (add-subview view newview))
+                        (assoc-in [:viewmap (newview :id)] newview)
+                    ))
+                  oldui)))
+            ui
+            (ui :viewmap))
+        
+        ;; replace alignment property letters with ids
+        ui2 (assoc ui1 :viewmap (replace-alignment-names (ui1 :viewmap)))]
 
-                      view (-> (gen-view hash id cl w h bc)
-                               (add-align ta ba la ra ha va))
-                      
-                      subview (if (not= te nil)
-                                (gen-label te 40)
-                                nil)
-                      
-                      newview (if (not= nil subview)
-                                (add-subview view subview)
-                                view)
-
-                      newviews (conj views hash)
-                      
-                      newviewmap (cond-> viewmap
-                                   true (assoc (newview :id) newview)
-                                   subview (assoc (subview :id) subview))]
-                  (-> ui
-                      (assoc :viewmap newviewmap)
-                      (assoc :views newviews)))
-                ui))
-            {:viewmap {}
-             :views [] }
-            lines)]
     (println "ui" ui)
-    ;; replace alignment letters with ids
-    (assoc ui :viewmap (replace-alignment-names (ui :viewmap)))))
+    ui2))
 
 
 (defn align-view [viewmap id width height]
@@ -214,8 +205,9 @@
                   ;; align self
                   newview (align-view (newui :viewmap) id width height)
                   ;; align subviews
+                  newnewui (align newui (newview :sv) width height)
                   ]
-              (assoc-in newui [:viewmap id] newview)
+              (assoc-in newnewui [:viewmap id] newview)
               ))
           ui
           coll))
