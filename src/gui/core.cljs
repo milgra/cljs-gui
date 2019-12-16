@@ -108,7 +108,7 @@ B CLButton TEBack BCFFFFFF55 FCFFFFFFFF TAP HA0 WI150 HE50
        
        uimap (ui/gen-from-desc menulayout)
        viewids (ui/collect-visible-ids uimap (uimap :views))
-       newuimap (ui/align uimap (uimap :views) (. js/window -innerWidth)  (. js/window -innerHeight))
+       newuimap (ui/align uimap (uimap :views) 0 0 (. js/window -innerWidth)  (. js/window -innerHeight))
        views (map (newuimap :viewmap) viewids)
        ]
 

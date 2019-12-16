@@ -140,73 +140,71 @@
     ui2))
 
 
-(defn align-view [viewmap id width height]
-  (println "align-view" id)
+(defn align-view [viewmap id cx cy width height]
   (let [view (get viewmap id)
-        {:keys [x y w h ta ba la ra va ha]} view
+        {:keys [x y w h ta ba la ra va ha cl te]} view
         taview (get viewmap ta)
         baview (get viewmap ba)
         laview (get viewmap la)
         raview (get viewmap ra)
         haview (get viewmap ha)
-        vaview (get viewmap va)
-        newview (-> view
-            (assoc :x (cond
-                        ;; align to view on the left or to screen edge
-                        (not= la nil)
-                        (if (= la "0")
+        vaview (get viewmap va)]
+    (println "align-view" id cl te cx cy width height)
+    (-> view
+        (assoc :x (cond
+                    ;; align to view on the left or to screen edge
+                    (not= la nil)
+                    (if (= la "0")
                       0
-                      (+ (laview :x) (laview :w)))
-                        ;; align to view on the right or to screen edge
-                        (not= ra nil)
-                        (if (= ra "0")
-                          (- width w)
-                          (- (raview :x) w))
-                        ;; align to horizontal center or between left align and right align view
-                        (not= ha nil)
-                        (if (= ha "0")
-                          (- (/ width 2) (/ w 2))
-                          (- (- (laview :x) (/ (- (raview :x)(+ (laview :x)(laview :w))) 2) ) (/ w 2)))
-                        ;; or leave x position as is
-                        :default
+                      (+ cx (laview :x) (laview :w)))
+                    ;; align to view on the right or to screen edge
+                    (not= ra nil)
+                    (if (= ra "0")
+                      (- width w)
+                      (- (raview :x) w))
+                    ;; align to horizontal center or between left align and right align view
+                    (not= ha nil)
+                    (if (= ha "0")
+                      (+ cx (- (/ width 2) (/ w 2)))
+                      (- (- (laview :x) (/ (- (raview :x)(+ (laview :x)(laview :w))) 2) ) (/ w 2)))
+                    ;; or leave x position as is
+                    :default
                     x))
-            (assoc :y (cond
-                        ;; align to view on the top or to screen edge
-                        (not= ta nil)
-                        (if (= ta "0")
-                          0
-                          (+ (taview :y)(taview :h)))
-                        ;; align to view on the bottom or to screen edge
-                        (not= ba nil)
-                        (if (= ba "0")
-                          (- height h)
-                          (- (baview :y) h))
-                        ;; align to vertical center or between bottom and top align view
-                        (not= va nil)
-                        (if (= va "0")
-                          (- (/ height 2) (/ h 2))
+        (assoc :y (cond
+                    ;; align to view on the top or to screen edge
+                    (not= ta nil)
+                    (if (= ta "0")
+                      0
+                      (+ (taview :y)(taview :h)))
+                    ;; align to view on the bottom or to screen edge
+                    (not= ba nil)
+                    (if (= ba "0")
+                      (- height h)
+                      (- (baview :y) h))
+                    ;; align to vertical center or between bottom and top align view
+                    (not= va nil)
+                    (if (= va "0")
+                      (+ cy (- (/ height 2) (/ h 2)))
                       (- (- (baview :y) (/ (- (baview :y)(+ (taview :y)(taview :h))) 2 )) (/ h 2)))
-                        :default
-                        y)))]
-    (println "new" newview)
-    newview
-    ))
+                    :default
+                    y)))))
 
 
-(defn align [ui coll width height]
+(defn align [ui coll cx cy width height]
   "iterate through all views and align them based on their alignment switches"
-  (println "aligncoll" coll)
+  (println "aligncoll" coll cx cy width height)
   (reduce (fn [oldui id]
             (let [view (get (ui :viewmap) id)
-                  {:keys [x y w h ta ba la ra va ha]} view
-                  toalign (filter #(and (not= % nil) (not= % "0")) [ta ba la ra va ha])
+                  {:keys [x y w h ta ba la ra va ha id cl te]} view
+                  toalign (do
+                            (println "view" id cl te)
+                            (filter #(and (not= % nil) (not= % "0")) [ta ba la ra va ha]))
                   ;; first align relative views
-                  newui (align oldui toalign width height)
+                  newui (align oldui toalign (+ cx x) (+ cy y) width height)
                   ;; align self
-                  newview (align-view (newui :viewmap) id width height)
+                  newview (align-view (newui :viewmap) id cx cy width height)
                   ;; align subviews
-                  newnewui (align newui (newview :sv) width height)
-                  ]
+                  newnewui (align newui (newview :sv) (newview :x) (newview :y) (newview :w) (newview :h))]
               (assoc-in newnewui [:viewmap id] newview)
               ))
           ui
