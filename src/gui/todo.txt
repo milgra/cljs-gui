@@ -1,5 +1,5 @@
-button with label
-alignment working
+visible alignment
+button press detection
 data-flow diagram
 
 

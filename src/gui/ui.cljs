@@ -19,10 +19,23 @@
    :na name
    :x 0
    :y 0
+   ;; if its between 0 and 1 its percentage, if its over its fixed
    :w width
    :h height
    :tx (str "Color 0x" color)
    :sv []})
+
+
+(defn gen-label [text size]
+  (let [{lw :width lh :height} (webgl/sizes-for-glyph text size)
+        hash (keyword (gen-id 8))
+        view (gen-view hash text "Label" lw lh "00000000")]
+  (-> view
+      (assoc :tx (str "Glyph " size "%" text))
+      (assoc :te text)
+      (assoc :ha "0")
+      (assoc :va "0"))
+  ))
 
 
 (defn add-align [view ta ba la ra ha va]
@@ -46,25 +59,10 @@
          (= (count word) 1) (assoc result :id word)
          (str/starts-with? word "WI") (assoc result :w (js/parseInt (subs word 2) 10))
          (str/starts-with? word "HE") (assoc result :h (js/parseInt (subs word 2) 10))
+         (str/starts-with? word "TE") (assoc result :te (str/replace (subs word 2) #"~" " "))
          :default (assoc result (keyword (str/lower-case (subs word 0 2))) (subs word 2))))
      {}
      words)))
-
-
-(defn gen-label [text size]
-  (let [{lw :width lh :height} (webgl/sizes-for-glyph text size)]
-    {:cl "Label"
-     :id (keyword (gen-id 8))
-     :na ""
-     :x 0
-     :y 0
-     :w lw
-     :h lh
-     :te text
-     :tx (str "Glyph " size "%" text)
-     :ha "0"
-     :va "0"
-     :sv []}))
 
 
 (defn add-subview [{subviews :sv :as view} subview]
@@ -136,7 +134,6 @@
         ;; replace alignment property letters with ids
         ui2 (assoc ui1 :viewmap (replace-alignment-names (ui1 :viewmap)))]
 
-    (println "ui" ui)
     ui2))
 
 
@@ -148,57 +145,59 @@
         laview (get viewmap la)
         raview (get viewmap ra)
         haview (get viewmap ha)
-        vaview (get viewmap va)]
-    (println "align-view" id cl te cx cy width height)
-    (-> view
-        (assoc :x (cond
-                    ;; align to view on the left or to screen edge
-                    (not= la nil)
-                    (if (= la "0")
-                      0
-                      (+ cx (laview :x) (laview :w)))
-                    ;; align to view on the right or to screen edge
-                    (not= ra nil)
-                    (if (= ra "0")
-                      (- width w)
-                      (- (raview :x) w))
-                    ;; align to horizontal center or between left align and right align view
-                    (not= ha nil)
-                    (if (= ha "0")
-                      (+ cx (- (/ width 2) (/ w 2)))
-                      (- (- (laview :x) (/ (- (raview :x)(+ (laview :x)(laview :w))) 2) ) (/ w 2)))
-                    ;; or leave x position as is
-                    :default
-                    x))
-        (assoc :y (cond
-                    ;; align to view on the top or to screen edge
-                    (not= ta nil)
-                    (if (= ta "0")
-                      0
-                      (+ (taview :y)(taview :h)))
-                    ;; align to view on the bottom or to screen edge
-                    (not= ba nil)
-                    (if (= ba "0")
-                      (- height h)
-                      (- (baview :y) h))
-                    ;; align to vertical center or between bottom and top align view
+        vaview (get viewmap va)
+        result
+        (-> view
+            (assoc :x (cond
+                        ;; align to view on the left or to screen edge
+                        (not= la nil)
+                        (if (= la "0")
+                          0
+                          (+ cx (laview :x) (laview :w)))
+                        ;; align to view on the right or to screen edge
+                        (not= ra nil)
+                        (if (= ra "0")
+                          (- width w)
+                          (- (raview :x) w))
+                        ;; align to horizontal center or between left align and right align view
+                        (not= ha nil)
+                        (if (= ha "0")
+                          (+ cx (- (/ width 2) (/ w 2)))
+                          (- (- (laview :x) (/ (- (raview :x)(+ (laview :x)(laview :w))) 2) ) (/ w 2)))
+                        ;; or leave x position as is
+                        :default
+                        x))
+            (assoc :y (cond
+                        ;; align to view on the top or to screen edge
+                        (not= ta nil)
+                        (if (= ta "0")
+                          0
+                          (+ (taview :y)(taview :h)))
+                        ;; align to view on the bottom or to screen edge
+                        (not= ba nil)
+                        (if (= ba "0")
+                          (- height h)
+                          (- (baview :y) h))
+                        ;; align to vertical center or between bottom and top align view
                     (not= va nil)
                     (if (= va "0")
                       (+ cy (- (/ height 2) (/ h 2)))
                       (- (- (baview :y) (/ (- (baview :y)(+ (taview :y)(taview :h))) 2 )) (/ h 2)))
                     :default
-                    y)))))
+                    y)))]
+    (println "a:" cl te x y w h
+             "to" cx cy width height
+             "final" (result :x) (result :y) (result :w) (result :h))
+    result
+    ))
 
 
 (defn align [ui coll cx cy width height]
   "iterate through all views and align them based on their alignment switches"
-  (println "aligncoll" coll cx cy width height)
   (reduce (fn [oldui id]
             (let [view (get (ui :viewmap) id)
                   {:keys [x y w h ta ba la ra va ha id cl te]} view
-                  toalign (do
-                            (println "view" id cl te)
-                            (filter #(and (not= % nil) (not= % "0")) [ta ba la ra va ha]))
+                  toalign (filter #(and (not= % nil) (not= % "0")) [ta ba la ra va ha])
                   ;; first align relative views
                   newui (align oldui toalign (+ cx x) (+ cy y) width height)
                   ;; align self
@@ -210,10 +209,13 @@
           ui
           coll))
 
-(defn collect-visible-ids [ui coll]
+
+(defn collect-visible-ids [ui coll path]
+  "collects ids of views that are currently visible"
+  (println "c:" path)
   (reduce
    (fn [res id]
      (let [view ((ui :viewmap) id)]
-       (concat res (collect-visible-ids ui (view :sv)))))
+       (concat res (collect-visible-ids ui (view :sv) (str path ":" (view :cl) )))))
    coll
    coll))

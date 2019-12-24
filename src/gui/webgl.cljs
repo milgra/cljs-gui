@@ -82,7 +82,7 @@
     (set! (.-textBaseline context) "middle")
     (.clearRect context 0 0 (.-width canvas) (.-height canvas)) 
     (let [width (int (.-width (.measureText context text)))]
-      (.fillText context text 0 (/ itemhth 2))
+      (.fillText context text 0 (int (/ itemhth 1.8)))
       {:data (.-data (.getImageData context 0 0 width itemhth))
        :width width
        :height itemhth})))

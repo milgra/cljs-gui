@@ -86,10 +86,10 @@ D CLButton TEDown BCFFFFFF55 FCFFFFFFFF BA0 RA0 WI100 HE100
  N |
  O |
  D |
-C CLButton TEContinue BCFF00FFFF FCFFFFFFFF BAN HA0 WI150 HE50
-N CLButton TENew~Game BCFFFF00FF FCFFFFFFFF BAO HA0 WI150 HE50
-O CLButton TEOptions BC00FFFFFF FCFFFFFFFF VA0 HA0 WI150 HE50
-D CLButton TEDonate BCFFFFFFFF FCFFFFFFFF TAO HA0 WI150 HE50
+C CLButton TEContinue BCFF00FFFF FCFFFFFFFF BAN HA0 WI250 HE50
+N CLButton TENew~Game BCFFFF00FF FCFFFFFFFF BAO HA0 WI250 HE50
+O CLButton TEOptions BC00FFFFFF FCFFFFFFFF VA0 HA0 WI250 HE50
+D CLButton TEDonate BCFFFFFFFF FCFFFFFFFF TAO HA0 WI250 HE50
 "
 
        optslayout
@@ -99,20 +99,17 @@ D CLButton TEDonate BCFFFFFFFF FCFFFFFFFF TAO HA0 WI150 HE50
  A |
  P |
  B |
-M CLSlider TEMusic~Volume BCFFFFFF55 FCFFFFFFFF BAS HA0 WI150 HE50
-S CLSlider TESound~Volume BCFFFFFF55 FCFFFFFFFF BAA HA0 WI150 HE50
-A CLSlider TEControls~Alpha BCFFFFFF55 FCFFFFFFFF VA0 HA0 WI150 HE50
-P CLToggle TEShow/Hide~Physics BCFFFFFF55 FCFFFFFFFF TAA HA0 WI150 HE50
-B CLButton TEBack BCFFFFFF55 FCFFFFFFFF TAP HA0 WI150 HE50
+M CLSlider TEMusic~Volume BCFFFFFF55 FCFFFFFFFF BAS HA0 WI250 HE50
+S CLSlider TESound~Volume BCFFFFFF55 FCFFFFFFFF BAA HA0 WI250 HE50
+A CLSlider TEControls~Alpha BCFFFFFF55 FCFFFFFFFF VA0 HA0 WI250 HE50
+P CLToggle TEShow/Hide~Physics BCFFFFFF55 FCFFFFFFFF TAA HA0 WI250 HE50
+B CLButton TEBack BCFFFFFF55 FCFFFFFFFF TAP HA0 WI250 HE50
 "
        
        uimap (ui/gen-from-desc menulayout)
-       viewids (ui/collect-visible-ids uimap (uimap :views))
-       newuimap (ui/align uimap (uimap :views) 0 0 (. js/window -innerWidth)  (. js/window -innerHeight))
-       views (map (newuimap :viewmap) viewids)
-       ]
-
-    (println "views" views)
+       viewids (ui/collect-visible-ids uimap (uimap :views) "")
+       newuimap (ui/align uimap (uimap :views) 0 0 (. js/window -innerWidth) (. js/window -innerHeight))
+       views (map (newuimap :viewmap) viewids)]
     
     ;; key listeners
 
