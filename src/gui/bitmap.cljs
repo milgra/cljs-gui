@@ -31,4 +31,4 @@
         (recur (inc index))
         bmp))))
 
-(insert (init 10 10 0xFF 0 0 0xFF) (init 5 5 0 0 0 0xFF) 2 2 )
+;;(insert (init 10 10 0xFF 0 0 0xFF) (init 5 5 0 0 0 0xFF) 2 2 )

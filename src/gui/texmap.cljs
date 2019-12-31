@@ -1,5 +1,9 @@
+;; texture map
+;; places smaller bitmaps into one big bitmap to use it as gpu texture
+
 (ns gui.texmap
   (:require [gui.bitmap :as bitmap]))
+
 
 (defn init [w h r g b a]
   (let [result {:bitmap (bitmap/init w h r g b a)
@@ -10,11 +14,14 @@
                 :rowy 0}]
     result))
 
+
 (defn hasbmp? [ { contents :contents } id ]
   (contains? contents id))
 
+
 (defn getbmp [ { contents :contents } id ]
   (get contents id))
+
 
 (defn setbmp [{:keys [bitmap contents rowx rowy rowh] :as texmap}
               id

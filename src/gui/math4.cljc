@@ -1,5 +1,6 @@
 (ns gui.math4)
 
+
 (defn proj_ortho [ left right bottom top near far ]
   (let [rpl ( + right left )
         rml ( - right left )
@@ -27,6 +28,7 @@
      (/ (- tpb) tmb)
      (/ (- fpn) fmn)
      1.0 ]))
+
 
 (defn proj_pers [ fovy aspect nearz farz ]
   (let [cotan (/ 1.0 (Math/tan (/ fovy 2.0)))]
