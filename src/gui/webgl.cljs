@@ -37,6 +37,8 @@
 (defn init []
   (let [context (context/get-context (.getElementById js/document "main") {:premultiplied-alpha false :alpha false})
 
+        tempcanvas (.createElement js/document "canvas")
+                
         ui-shader (shaders/create-program
                    context
                    (shaders/create-shader context shader/vertex-shader ui-vertex-source)
@@ -54,6 +56,7 @@
         ui-location-texcoord (shaders/get-attrib-location context ui-shader "texcoord")]
     
     {:context context
+     :tempcanvas tempcanvas 
      :textures {}
      :ui-shader ui-shader
      :ui-buffer ui-buffer
@@ -63,8 +66,8 @@
      :ui-location-texcoord ui-location-texcoord}))
 
 
-(defn sizes-for-glyph [text height]
-  (let [context (.getContext (. js/document getElementById "temp") "2d" )
+(defn sizes-for-glyph [canvas text height]
+  (let [context (.getContext canvas "2d" )
         itemhth (* height 1.2)]
     (set! (.-font context) (str height "px Cantarell"))
     (set! (.-fillStyle context) "#000000")
@@ -73,9 +76,8 @@
      :height (int itemhth)}))
 
 
-(defn bitmap-for-glyph [height text]
-  (let [canvas (. js/document getElementById "temp")
-        context (.getContext canvas "2d")
+(defn bitmap-for-glyph [canvas height text]
+  (let [context (.getContext canvas "2d")
         itemhth (int (* height 1.2))]
     (set! (.-font context) (str height "px Cantarell"))
     (set! (.-fillStyle context) "#000000")
@@ -88,7 +90,7 @@
        :height itemhth})))
 
 
-(defn tex-gen-for-ids [ui-texmap views]
+(defn tex-gen-for-ids [tempcanvas ui-texmap views]
   "generates textures for descriptor"
   (loop [remviews views
          tmap ui-texmap]
@@ -114,13 +116,13 @@
                               g (js/parseInt (subs rem 2 4) 16)
                               b (js/parseInt (subs rem 4 6) 16)
                               a (js/parseInt (subs rem 6 8) 16)]
-                          (texmap/setbmp tmap tx (bitmap/init 10 10 r g b a) 1))
+                          (texmap/setbmp tmap (bitmap/init 10 10 r g b a) tx 1))
 
                         ;; show glyph
                         (str/starts-with? tx "Glyph")
                         (let [arg (str/split (subs tx 5) #"%")
-                              bmp (bitmap-for-glyph (js/parseInt (arg 0)) (arg 1))]
-                          (texmap/setbmp tmap tx bmp 0))
+                              bmp (bitmap-for-glyph tempcanvas (js/parseInt (arg 0)) (arg 1))]
+                          (texmap/setbmp tmap bmp tx 0))
 
                         ;; return empty texmap if unknown
                         :default
@@ -129,6 +131,7 @@
 
 
 (defn draw! [{:keys [context
+                     tempcanvas
                      textures
                      ui-shader
                      ui-buffer
@@ -142,7 +145,7 @@
   "draw views defined by x y width height and texure requirements." 
 
   (let [;; generate textures for new views
-        newtexmap (tex-gen-for-ids ui-texmap views)
+        newtexmap (tex-gen-for-ids tempcanvas ui-texmap views)
 
         ;; generate vertex data from views
         vertexes (flatten
@@ -159,14 +162,14 @@
                         [x (+ y h)] [tlx bry] ))) views))]
 
     ;; upload texture map if changed
-    (if (newtexmap :changed)
+    (when (newtexmap :changed)
       (texture/upload-texture
        context
        ui-texture
-       (:data (:bitmap newtexmap))
+       (:data (:texbmp newtexmap))
        1024
        1024))
-
+    
     ;; upload buffer 
     (buffers/upload-buffer
      context ui-buffer

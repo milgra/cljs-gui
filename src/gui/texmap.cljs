@@ -6,12 +6,12 @@
 
 
 (defn init [w h r g b a]
-  (let [result {:bitmap (bitmap/init w h r g b a)
+  (let [result {:texbmp (bitmap/init w h r g b a)
                 :contents {}
                 :changed true
-                :rowh 0
-                :rowx 0
-                :rowy 0}]
+                :lasth 0
+                :lastx 0
+                :lasty 0}]
     result))
 
 
@@ -23,36 +23,44 @@
   (get contents id))
 
 
-(defn setbmp [{:keys [bitmap contents rowx rowy rowh] :as texmap}
-              id
-              {:keys [data width height] :as newbmp}
+(defn setbmp [{:keys [texbmp contents lastx lasty lasth] :as texmap}
+              {:keys [data width height] :as bitmap}
+              texid
               inset]
 
-  (let [newy (if (> (+ rowx width) (bitmap :width))
-               rowh
-               rowy)
-        
-        newx (if (> (+ rowx width) (bitmap :width))
+  (let [;;new height is 0 if entering new row else check if we have to increase it
+        newh (if (> (+ lastx width) (texbmp :width))
                0
-               rowx)
+               (if (> height lasth)
+                 height
+                 lasth))
 
-        neww  (+ newx width)
+        ;;increase new y position if entering new row
+        newy (if (> (+ lastx width) (texbmp :width))
+               (+ lasty lasth)
+               lasty)
 
-        newh  (+ newy height)
+        ;;jump to row start if entering new row
+        newx (if (> (+ lastx width) (texbmp :width))
+               0
+               lastx)
 
-        newtlx (/ (+ newx inset) (bitmap :width))
-        newtly (/ (+ newy inset) (bitmap :height))
-        newbrx (/ (- neww inset) (bitmap :width))
-        newbry (/ (- newh inset) (bitmap :height))
+        texw  (+ newx width)
+        texh  (+ newy height)
+
+        newtlx (/ (+ newx inset) (texbmp :width))
+        newtly (/ (+ newy inset) (texbmp :height))
+        newbrx (/ (- texw inset) (texbmp :width))
+        newbry (/ (- texh inset) (texbmp :height))
         
-        over? (or (> neww (bitmap :width)) (> newh (bitmap :height)))]
+        over? (> newh (texbmp :height))]
     
     (if over?
       nil
       (-> texmap
-          (assoc-in [:contents id] [ newtlx newtly newbrx newbry])
-          (assoc :rowx neww)
-          (assoc :rowy newy)
-          (assoc :rowh rowh)
-          (assoc :bitmap (bitmap/insert bitmap newbmp newx newy))
+          (assoc-in [:contents texid] [newtlx newtly newbrx newbry])
+          (assoc :lastx texw)
+          (assoc :lasty newy)
+          (assoc :lasth newh)
+          (assoc :texbmp (bitmap/insert texbmp bitmap newx newy))
           (assoc :changed true)))))

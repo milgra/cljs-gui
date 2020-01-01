@@ -22,12 +22,14 @@
    ;; if its between 0 and 1 its percentage, if its over its fixed
    :w width
    :h height
-   :tx (str "Color 0x" color)
+   :tx (if (= class "Debug")
+         "Debug"
+         (str "Color 0x" color))
    :sv []})
 
 
-(defn gen-label [text size]
-  (let [{lw :width lh :height} (webgl/sizes-for-glyph text size)
+(defn gen-label [tempcanvas text size]
+  (let [{lw :width lh :height} (webgl/sizes-for-glyph tempcanvas text size)
         hash (keyword (gen-id 8))
         view (gen-view hash text "Label" lw lh "00000000")]
   (-> view
@@ -97,7 +99,7 @@
    viewmap))
 
 
-(defn gen-from-desc [desc]
+(defn gen-from-desc [desc tempcanvas]
   "generate view structure from description"
   
   (let [lines (str/split-lines desc)
@@ -122,7 +124,7 @@
             (fn [oldui pair]
               (let [{:keys [id te] :as view} (val pair)]
                 (if te
-                  (let [newview (gen-label te 40)]
+                  (let [newview (gen-label tempcanvas te 40)]
                     (-> oldui
                         (assoc-in [:viewmap id] (add-subview view newview))
                         (assoc-in [:viewmap (newview :id)] newview)
@@ -179,12 +181,12 @@
                           (- height h)
                           (- (baview :y) h))
                         ;; align to vertical center or between bottom and top align view
-                    (not= va nil)
-                    (if (= va "0")
-                      (+ cy (- (/ height 2) (/ h 2)))
-                      (- (- (baview :y) (/ (- (baview :y)(+ (taview :y)(taview :h))) 2 )) (/ h 2)))
-                    :default
-                    y)))]
+                        (not= va nil)
+                        (if (= va "0")
+                          (+ cy (- (/ height 2) (/ h 2)))
+                          (- (- (baview :y) (/ (- (baview :y)(+ (taview :y)(taview :h))) 2 )) (/ h 2)))
+                        :default
+                        y)))]
     (println "a:" cl te x y w h
              "to" cx cy width height
              "final" (result :x) (result :y) (result :w) (result :h))

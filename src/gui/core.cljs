@@ -56,7 +56,7 @@
                   :font-file "font.png"
                   :keypresses {}}
        
-       uimap (ui/gen-from-desc layouts/menu)
+       uimap (ui/gen-from-desc layouts/hud (get-in initstate [:glstate :tempcanvas]))
        viewids (ui/collect-visible-ids uimap (uimap :views) "")
        newuimap (ui/align uimap (uimap :views) 0 0 (. js/window -innerWidth) (. js/window -innerHeight))
        views (map (newuimap :viewmap) viewids)]

@@ -1,7 +1,10 @@
-visible alignment
+sarokra igazitas
+baseview valtas
 button press detection
-data-flow diagram
+slider mukodes
+mass point engine
 
+data-flow diagram
 
 clojure forces you to do fantastic things!!! instead of fucking up the code because of laziness you have to think everything out. you still can throw in dozens of function calls after each other beacuse of laziness to do something but the code immediately will be unmaintainable so you will start to not doing it
 clojure/script - forces you to think, to not program lazily (no mid-return, no mid-declarations, makes you realize that a function does too much - getting coordinates from a texmap shouldn't add non-existing texture, beacuse it has to return a new texmap aaand the result also which looks terrible )
