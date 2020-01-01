@@ -14,21 +14,6 @@
   (:import [goog.events EventType]))
   
 
-(defn load-level! [channel name]
-  (go
-    (let [response (<! (http/get name
-                                 {:with-credentials? false}))]
-      (put! channel (:body response)))))
-
-
-(defn load-image! [channel name]
-  (let [img (js/Image.)]
-    (set! (.-onload img)
-          (fn [a]
-            (put! channel img)))
-    (set! (.-src img) name)))
-
-
 (defn animate [state draw-fn]
   (letfn [(loop [oldstate frame]
             (fn [time]
@@ -48,8 +33,7 @@
 
   (let
       [keychannel (chan)
-       filechannel (chan)
-       imagechannel (chan)
+       mousechannel (chan)
              
        initstate {:glstate (webgl/init)
                   :desc_file "level0.svg"
@@ -74,14 +58,22 @@
      (fn [event] (put! keychannel {:code (.-keyCode event) :value false})))
 
     (events/listen
+     js/document
+     EventType.MOUSEDOWN
+     (fn [event] (put! mousechannel {:code "mouse" :x (.-clientX event) :y (.-clientY event) :type "down"})))
+
+    (events/listen
+     js/document
+     EventType.MOUSEUP
+     (fn [event] (put! mousechannel {:code "mouse" :x (.-clientX event) :y (.-clientY event) :type "up"})))
+
+    (events/listen
      js/window
      EventType.RESIZE
      (fn [event]
        (resize-context!)))
 
     (resize-context!)
-
-    (load-image! imagechannel (:font-file initstate))
     
     ;; runloop
 
@@ -100,10 +92,14 @@
                          10.0)
              
              keyevent (poll! keychannel)
+             mouseevent (poll! mousechannel)
              
              newglstate (webgl/draw! (:glstate state) 
                                      projection
                                      views)]
+
+         (when mouseevent
+           (println "mouseevent" mouseevent))
 
          (assoc state :glstate newglstate))))))
 
