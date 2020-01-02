@@ -80,7 +80,6 @@
     [(+ px vx) (+ py vy)]))
 
 
-
 (defn length_vec2 [ [ax ay] ]
   (Math/sqrt (+ (* ax ax) (* ay ay))))
 

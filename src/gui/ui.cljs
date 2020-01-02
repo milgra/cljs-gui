@@ -194,30 +194,30 @@
     ))
 
 
-(defn align [ui coll cx cy width height]
+(defn align [viewmap coll cx cy width height]
   "iterate through all views and align them based on their alignment switches"
-  (reduce (fn [oldui id]
-            (let [view (get (ui :viewmap) id)
+  (reduce (fn [oldmap id]
+            (let [view (get oldmap id)
                   {:keys [x y w h ta ba la ra va ha id cl te]} view
                   toalign (filter #(and (not= % nil) (not= % "0")) [ta ba la ra va ha])
                   ;; first align relative views
-                  newui (align oldui toalign (+ cx x) (+ cy y) width height)
+                  newmap (align oldmap toalign (+ cx x) (+ cy y) width height)
                   ;; align self
-                  newview (align-view (newui :viewmap) id cx cy width height)
+                  newview (align-view newmap id cx cy width height)
                   ;; align subviews
-                  newnewui (align newui (newview :sv) (newview :x) (newview :y) (newview :w) (newview :h))]
-              (assoc-in newnewui [:viewmap id] newview)
+                  newnewmap (align newmap (newview :sv) (newview :x) (newview :y) (newview :w) (newview :h))]
+              (assoc newnewmap id newview)
               ))
-          ui
+          viewmap
           coll))
 
 
-(defn collect-visible-ids [ui coll path]
+(defn collect-visible-ids [viewmap coll path]
   "collects ids of views that are currently visible"
   (println "c:" path)
   (reduce
    (fn [res id]
-     (let [view ((ui :viewmap) id)]
-       (concat res (collect-visible-ids ui (view :sv) (str path ":" (view :cl) )))))
+     (let [view (viewmap id)]
+       (concat res (collect-visible-ids viewmap (view :sv) (str path ":" (view :cl) )))))
    coll
    coll))
