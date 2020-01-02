@@ -54,7 +54,10 @@
                  (uimap :views)
                  "")
 
-        views (map aligned viewids)]
+        views (map aligned viewids)
+
+        state {:glstate glstate
+               :uimap uimap}]
 
     (events/listen
      js/document
@@ -84,8 +87,8 @@
     (resize-context!)
     
     (animate
-     glstate
-     (fn [state frame time]         
+     state
+     (fn [oldstate frame time]         
        (let [projection (math4/proj_ortho
                          0
                          (.-innerWidth js/window)
@@ -98,13 +101,13 @@
              
              mouseevent (poll! mousech)
              
-             newglstate (webgl/draw! state 
+             newglstate (webgl/draw! (oldstate :glstate) 
                                      projection
                                      views)]
 
          (when mouseevent
            (println "mouseevent" mouseevent))
 
-         newglstate)))))
+         (assoc oldstate :glstate newglstate))))))
 
 (main)
