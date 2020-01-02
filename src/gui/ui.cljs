@@ -227,3 +227,16 @@
        (concat res (collect-visible-ids viewmap (view :sv) (str path ":" (view :cl) )))))
    coll
    coll))
+
+
+(defn collect-pressed-views [viewmap event]
+  (reduce
+   (fn [result view]
+     (let [{:keys [id x y w h]} view
+           px (event :x)
+           py (event :y)]
+       (if (and (and (> px x) (< px (+ x w))) (and (> py y) (< py (+ y h))))
+         (conj result id)
+         result)))
+   []
+   (vals viewmap)))

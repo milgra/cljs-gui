@@ -54,10 +54,8 @@
                  (uimap :views)
                  "")
 
-        views (map aligned viewids)
-
         state {:glstate glstate
-               :uimap uimap}]
+               :uimap (assoc uimap :viewmap aligned)}]
 
     (events/listen
      js/document
@@ -88,7 +86,7 @@
     
     (animate
      state
-     (fn [oldstate frame time]         
+     (fn [oldstate frame time]
        (let [projection (math4/proj_ortho
                          0
                          (.-innerWidth js/window)
@@ -100,13 +98,16 @@
              keyevent (poll! keych)
              
              mouseevent (poll! mousech)
+
+             views (map (get-in oldstate [:uimap :viewmap]) viewids)
              
              newglstate (webgl/draw! (oldstate :glstate) 
                                      projection
                                      views)]
 
          (when mouseevent
-           (println "mouseevent" mouseevent))
+           (let [picked (ui/collect-pressed-views (get-in oldstate [:uimap :viewmap]) mouseevent)]
+           (println "mouseevent" mouseevent "picked" picked)))
 
          (assoc oldstate :glstate newglstate))))))
 
