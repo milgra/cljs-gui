@@ -99,44 +99,50 @@
    viewmap))
 
 
+(defn gen-base-views [lines]
+  "generate basic views from line descriptions"
+  (reduce
+   (fn [{:keys [viewmap views] :as oldui} line]
+     (if-not (or (= (count line) 0) (str/ends-with? line "|"))
+       (let [{:keys [id cl w h bc fc ta ba la ra va ha te]} (parse-desc line)
+             view (-> (gen-view (keyword (gen-id 8)) id cl w h bc)
+                      (add-align ta ba la ra ha va)
+                      (assoc :te te))]
+         (-> oldui
+             (assoc :viewmap (assoc viewmap (view :id) view))
+             (assoc :views (conj views (view :id)))))
+       oldui))
+   {:viewmap {} :views [] }
+   lines))
+
+
+(defn gen-detailed-views [ui tempcanvas]
+  "generate labels for buttons if needed"
+  (reduce
+   (fn [oldui pair]
+     (let [{:keys [id te] :as view} (val pair)]
+       (if te
+         (let [newview (gen-label tempcanvas te 40)]
+           (-> oldui
+               (assoc-in [:viewmap id] (add-subview view newview))
+               (assoc-in [:viewmap (newview :id)] newview)
+               ))
+         oldui)))
+   ui
+   (ui :viewmap)))
+
+
+(defn replace-layout-ids [ui]
+  "replace alignment property letters with ids"
+  (assoc ui :viewmap (replace-alignment-names (ui :viewmap))))
+
+
 (defn gen-from-desc [desc tempcanvas]
-  "generate view structure from description"
-  
-  (let [lines (str/split-lines desc)
-
-        ;; generate views from descriptions
-        ui (reduce
-            (fn [{:keys [viewmap views] :as oldui} line]
-              (if-not (or (= (count line) 0) (str/ends-with? line "|"))
-                (let [{:keys [id cl w h bc fc ta ba la ra va ha te]} (parse-desc line)
-                      view (-> (gen-view (keyword (gen-id 8)) id cl w h bc)
-                               (add-align ta ba la ra ha va)
-                               (assoc :te te))]
-                  (-> oldui
-                      (assoc :viewmap (assoc viewmap (view :id) view))
-                      (assoc :views (conj views (view :id)))))
-                oldui))
-            {:viewmap {} :views [] }
-            lines)
-
-        ;; generate labels for buttons if needed
-        ui1 (reduce
-            (fn [oldui pair]
-              (let [{:keys [id te] :as view} (val pair)]
-                (if te
-                  (let [newview (gen-label tempcanvas te 40)]
-                    (-> oldui
-                        (assoc-in [:viewmap id] (add-subview view newview))
-                        (assoc-in [:viewmap (newview :id)] newview)
-                    ))
-                  oldui)))
-            ui
-            (ui :viewmap))
-        
-        ;; replace alignment property letters with ids
-        ui2 (assoc ui1 :viewmap (replace-alignment-names (ui1 :viewmap)))]
-
-    ui2))
+  "generate view structure from description"  
+  (let [lines (str/split-lines desc)]
+    (-> (gen-base-views lines)
+        (gen-detailed-views tempcanvas)
+        (replace-layout-ids))))
 
 
 (defn align-view [viewmap id cx cy width height]
@@ -187,9 +193,9 @@
                           (- (- (baview :y) (/ (- (baview :y)(+ (taview :y)(taview :h))) 2 )) (/ h 2)))
                         :default
                         y)))]
-    (println "a:" cl te x y w h
-             "to" cx cy width height
-             "final" (result :x) (result :y) (result :w) (result :h))
+    ;;(println "a:" cl te x y w h
+    ;;         "to" cx cy width height
+    ;;         "final" (result :x) (result :y) (result :w) (result :h))
     result
     ))
 
