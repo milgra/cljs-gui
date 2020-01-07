@@ -30,15 +30,14 @@
           bB (* x_bb -1)
           dt (-(* bA aB)(* bB aA))]
       (
-
        ;; if determinant is 0 they are parallel
        if (= dt 0)
        nil
-       ( let [aC (+(* x_ta aA)(* y_ta aB))
-              bC (+(* x_tb bA)(* y_tb bB))
-              x (/(-(* aB bC)(* bB aC)) dt)
-              y (/(-(* bA aC)(* aA bC)) dt)]
-        [x y] )))))
+       (let [aC (+(* x_ta aA)(* y_ta aB))
+             bC (+(* x_tb bA)(* y_tb bB))
+             x (/(-(* aB bC)(* bB aC)) dt)
+             y (/(-(* bA aC)(* aA bC)) dt)]
+         [x y])))))
 
 
 (defn inside_vec2
@@ -108,7 +107,7 @@
   [(- y) x])
 
 
-;; optimize by removing sqrt
+;; TODO optimize by removing sqrt
 (defn triangle_with_bases [ va vb side dir ]
   (let [dirv (sub_vec2 vb va)
         half (scale_vec2 dirv 0.5)

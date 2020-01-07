@@ -107,6 +107,7 @@
 
          (when mouseevent
            (let [picked (ui/collect-pressed-views (get-in oldstate [:uimap :viewmap]) mouseevent)]
+             ;; if picked is menu, switch to menu layout
            (println "mouseevent" mouseevent "picked" picked)))
 
          (assoc oldstate :glstate newglstate))))))

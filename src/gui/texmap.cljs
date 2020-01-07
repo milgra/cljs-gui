@@ -6,6 +6,7 @@
 
 
 (defn init [w h r g b a]
+  "create texture map with given background color"
   (let [result {:texbmp (bitmap/init w h r g b a)
                 :contents {}
                 :changed true
@@ -15,11 +16,13 @@
     result))
 
 
-(defn hasbmp? [ { contents :contents } id ]
+(defn hasbmp? [{contents :contents} id]
+  "texmap contains bitmap with given id?"
   (contains? contents id))
 
 
-(defn getbmp [ { contents :contents } id ]
+(defn getbmp [{contents :contents} id]
+  "returns bitmap with given id"
   (get contents id))
 
 
@@ -27,7 +30,7 @@
               {:keys [data width height] :as bitmap}
               texid
               inset]
-
+  "adds bmp to texmap with given id"
   (let [;;new height is 0 if entering new row else check if we have to increase it
         newh (if (> (+ lastx width) (texbmp :width))
                0

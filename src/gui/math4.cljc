@@ -2,6 +2,7 @@
 
 
 (defn proj_ortho [ left right bottom top near far ]
+  "create orthographic projection"
   (let [rpl ( + right left )
         rml ( - right left )
         tpb ( + top bottom )
@@ -31,7 +32,9 @@
 
 
 (defn proj_pers [ fovy aspect nearz farz ]
+  "create perspective projection"
   (let [cotan (/ 1.0 (Math/tan (/ fovy 2.0)))]
+
     [( / cotan aspect )
      0.0
      0.0
@@ -50,4 +53,4 @@
      0.0
      0.0
      (/ (* 2.0 farz nearz) (- nearz farz))
-     0.0] ))
+     0.0]))

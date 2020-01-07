@@ -1,6 +1,8 @@
 (ns gui.bitmap)
 
+
 (defn init [w h r g b a]
+  "creates bitmap with given base color"
   (let [length (* w h 4)
         data (js/Uint8Array. length)
         chunk (js/Uint8Array. [r g b a])]
@@ -13,9 +15,11 @@
          :width w
          :height h}))))
 
+
 (defn insert [{da :data wa :width ha :height :as bmp}
               {db :data wb :width hb :height :as src}
               x y]
+  "insert bitmap into a larger bitmap"
   ;;(println "wa ha" wa ha)
   ;;(println "wb hb" wb hb)
   ;;(println "to" x y)

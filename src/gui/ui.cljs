@@ -146,6 +146,7 @@
 
 
 (defn align-view [viewmap id cx cy width height]
+  "aligns view"
   (let [view (get viewmap id)
         {:keys [x y w h ta ba la ra va ha cl te]} view
         taview (get viewmap ta)
@@ -196,8 +197,7 @@
     ;;(println "a:" cl te x y w h
     ;;         "to" cx cy width height
     ;;         "final" (result :x) (result :y) (result :w) (result :h))
-    result
-    ))
+    result))
 
 
 (defn align [viewmap coll cx cy width height]
@@ -205,6 +205,7 @@
   (reduce (fn [oldmap id]
             (let [view (get oldmap id)
                   {:keys [x y w h ta ba la ra va ha id cl te]} view
+                  ;; filter nil and 0 switches, 0 means to full parent view
                   toalign (filter #(and (not= % nil) (not= % "0")) [ta ba la ra va ha])
                   ;; first align relative views
                   newmap (align oldmap toalign (+ cx x) (+ cy y) width height)
@@ -212,8 +213,7 @@
                   newview (align-view newmap id cx cy width height)
                   ;; align subviews
                   newnewmap (align newmap (newview :sv) (newview :x) (newview :y) (newview :w) (newview :h))]
-              (assoc newnewmap id newview)
-              ))
+              (assoc newnewmap id newview)))
           viewmap
           coll))
 
@@ -230,6 +230,7 @@
 
 
 (defn collect-pressed-views [viewmap event]
+  "collects view under touch point"
   (reduce
    (fn [result view]
      (let [{:keys [id x y w h]} view

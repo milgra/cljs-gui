@@ -15,6 +15,7 @@
             [cljs-webgl.constants.blending-factor-dest :as blend]
             [cljs-webgl.constants.texture-unit :as texture-unit]))
 
+
 (def ui-vertex-source
   "attribute highp vec4 position;
    attribute highp vec2 texcoord;
@@ -26,6 +27,7 @@
       texcoordv = texcoord;
    }")
 
+
 (def ui-fragment-source
   "varying highp vec2 texcoordv;
    uniform sampler2D texture_main;
@@ -34,16 +36,20 @@
       gl_FragColor = texture2D( texture_main , texcoordv);
 }")
 
+
 (defn init []
-  (let [context (context/get-context (.getElementById js/document "main") {:premultiplied-alpha false :alpha false})
+  "initializes webgl module"
+  (let [context (context/get-context
+                 (.getElementById js/document "main")
+                 {:premultiplied-alpha false :alpha false})
 
         tempcanvas (.createElement js/document "canvas")
-                
+
         ui-shader (shaders/create-program
                    context
                    (shaders/create-shader context shader/vertex-shader ui-vertex-source)
                    (shaders/create-shader context shader/fragment-shader ui-fragment-source))
-        
+
         ui-buffer (buffers/create-buffer
                    context
                    (arrays/float32 [0.0 0.0 0.0 0.0])
@@ -51,7 +57,8 @@
                    buffer-object/static-draw)
 
         ui-texmap (texmap/init 1024 1024 0 0 0 0)
-        ui-texture (.createTexture context) 
+        ui-texture (.createTexture context)
+        
         ui-location-pos (shaders/get-attrib-location context ui-shader "position")
         ui-location-texcoord (shaders/get-attrib-location context ui-shader "texcoord")]
     
@@ -67,6 +74,7 @@
 
 
 (defn sizes-for-glyph [canvas text height]
+  "returns glyph sizes"
   (let [context (.getContext canvas "2d" )
         itemhth (* height 1.2)]
     (set! (.-font context) (str height "px Cantarell"))
@@ -77,6 +85,7 @@
 
 
 (defn bitmap-for-glyph [canvas height text]
+  "returns glyph bitmap"
   (let [context (.getContext canvas "2d")
         itemhth (int (* height 1.2))]
     (set! (.-font context) (str height "px Cantarell"))
@@ -100,17 +109,17 @@
             newtmap (if (texmap/hasbmp? tmap tx)
                       tmap
                       (cond
-                        
-                        ;; show full texture in quad
+
                         (str/starts-with? tx "Debug")
+                        ;; show full texture in quad
                         (assoc-in tmap [:contents tx] [0 0 1 1])
 
-                        ;; show image in quad
                         (str/starts-with? tx "Image")
+                        ;; show image in quad
                         (tmap)
 
-                        ;; show color in quad
                         (str/starts-with? tx "Color")
+                        ;; show color in quad
                         (let [rem (subs tx 8)
                               r (js/parseInt (subs rem 0 2) 16)
                               g (js/parseInt (subs rem 2 4) 16)
@@ -118,15 +127,16 @@
                               a (js/parseInt (subs rem 6 8) 16)]
                           (texmap/setbmp tmap (bitmap/init 10 10 r g b a) tx 1))
 
-                        ;; show glyph
                         (str/starts-with? tx "Glyph")
+                        ;; show glyph
                         (let [arg (str/split (subs tx 5) #"%")
                               bmp (bitmap-for-glyph tempcanvas (js/parseInt (arg 0)) (arg 1))]
                           (texmap/setbmp tmap bmp tx 0))
 
-                        ;; return empty texmap if unknown
                         :default
+                        ;; return empty texmap if unknown
                         tmap))]
+        
         (recur (rest remviews) newtmap)))))
 
 
@@ -141,12 +151,9 @@
                      ui-texture] :as state }
              projection
              views]
-
   "draw views defined by x y width height and texure requirements." 
-
   (let [;; generate textures for new views
         newtexmap (tex-gen-for-ids tempcanvas ui-texmap views)
-
         ;; generate vertex data from views
         vertexes (flatten
                   (map
@@ -164,15 +171,16 @@
     ;; upload texture map if changed
     (when (newtexmap :changed)
       (texture/upload-texture
-       context
+      context
        ui-texture
        (:data (:texbmp newtexmap))
        1024
        1024))
-    
+
     ;; upload buffer 
     (buffers/upload-buffer
-     context ui-buffer
+     context
+     ui-buffer
      (arrays/float32 vertexes)
      buffer-object/array-buffer
      buffer-object/dynamic-draw)
