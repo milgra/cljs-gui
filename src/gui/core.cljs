@@ -29,6 +29,22 @@
         (set! (. canvas -height) (. js/window -innerHeight))))
 
 
+(defn gen-mouse-state [viewmap views mouseevent]
+  (reduce
+   (fn [result {:keys [id cl tx] :as view}]
+     (let [newview (if (= cl "Button")
+                     (-> view
+                         (assoc :oldtx tx)
+                         (assoc :tx "Color 0xFF0000FF"))
+                     view)]
+       (assoc result id newview)))
+   viewmap
+   views))
+
+(defn get-mouse-commands [views mouseevent]
+  (remove nil? (map :co views)))
+
+
 (defn main []
   "entering point"
   (let [keych (chan)
@@ -41,21 +57,8 @@
                layouts/hud
                (get-in glstate [:tempcanvas]))
 
-        aligned (ui/align
-                 (uimap :viewmap)
-                 (uimap :views)
-                 0
-                 0
-                 (. js/window -innerWidth)
-                 (. js/window -innerHeight))
-    
-        viewids (ui/collect-visible-ids
-                 aligned
-                 (uimap :views)
-                 "")
-
         state {:glstate glstate
-               :uimap (assoc uimap :viewmap aligned)}]
+               :uimap uimap}]
 
     (events/listen
      js/document
@@ -99,17 +102,51 @@
              
              mouseevent (poll! mousech)
 
-             views (map (get-in oldstate [:uimap :viewmap]) viewids)
+             oneuimap (oldstate :uimap)
+             
+             viewmap (ui/align
+                      (oneuimap :viewmap)
+                      (oneuimap :views)
+                      0
+                      0
+                      (. js/window -innerWidth)
+                      (. js/window -innerHeight))
+             
+             viewids (ui/collect-visible-ids
+                      viewmap
+                      (oneuimap :views)
+                      "")
+
+             views (map viewmap viewids)
              
              newglstate (webgl/draw! (oldstate :glstate) 
                                      projection
                                      views)]
+         
+         (if mouseevent
+           (let [picked (ui/collect-pressed-views viewmap mouseevent)
+                 views (map viewmap picked)
+                 ;;newviewmap (gen-mouse-state viewmap views mouseevent)
+                 commands (get-mouse-commands views mouseevent)
 
-         (when mouseevent
-           (let [picked (ui/collect-pressed-views (get-in oldstate [:uimap :viewmap]) mouseevent)]
-             ;; if picked is menu, switch to menu layout
-           (println "mouseevent" mouseevent "picked" picked)))
+                 newuimap (if (= "ShowMenu" (first commands))
+                            (ui/gen-from-desc
+                             layouts/menu
+                             (get-in glstate [:tempcanvas]))
+                            oneuimap
+                            )
+                 ]
 
-         (assoc oldstate :glstate newglstate))))))
+             ;; change state if command wants you to do that
+             
+             (-> oldstate
+                 (assoc :uimap newuimap)
+                 (assoc :glstate newglstate)
+                 ;;(assoc-in [:uimap :viewmap] newviewmap)
+                 ))
+           (-> oldstate
+               (assoc :glstate newglstate)
+               ;;(assoc-in [:uimap :viewmap] viewmap)
+               )))))))
 
 (main)

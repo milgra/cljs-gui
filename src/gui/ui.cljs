@@ -104,10 +104,11 @@
   (reduce
    (fn [{:keys [viewmap views] :as oldui} line]
      (if-not (or (= (count line) 0) (str/ends-with? line "|"))
-       (let [{:keys [id cl w h bc fc ta ba la ra va ha te]} (parse-desc line)
+       (let [{:keys [id cl w h bc fc ta ba la ra va ha te co]} (parse-desc line)
              view (-> (gen-view (keyword (gen-id 8)) id cl w h bc)
                       (add-align ta ba la ra ha va)
-                      (assoc :te te))]
+                      (assoc :te te)
+                      (assoc :co co))]
          (-> oldui
              (assoc :viewmap (assoc viewmap (view :id) view))
              (assoc :views (conj views (view :id)))))
@@ -220,7 +221,7 @@
 
 (defn collect-visible-ids [viewmap coll path]
   "collects ids of views that are currently visible"
-  (println "c:" path)
+  ;;(println "c:" path)
   (reduce
    (fn [res id]
      (let [view (viewmap id)]
