@@ -1,4 +1,4 @@
-(ns ^:figwheel-hooks gui.core
+(ns ^:figwheel-hooks demo.core
   (:require [goog.dom :as gdom]
             [goog.events :as events]
             [cljs.core.async :refer [<! chan put! take! poll!]]
@@ -8,7 +8,7 @@
             [gui.math4 :as math4]
             [gui.bitmap :as bitmap]
             [gui.texmap :as texmap]
-            [gui.layouts :as layouts])
+            [demo.layouts :as layouts])
   (:import [goog.events EventType]))
   
 
@@ -30,6 +30,7 @@
 
 
 (defn gen-mouse-state [viewmap views mouseevent]
+  "generates new view states for mouse event"
   (reduce
    (fn [result {:keys [id cl tx] :as view}]
      (let [newview (if (= cl "Button")
@@ -41,7 +42,9 @@
    viewmap
    views))
 
+
 (defn get-mouse-commands [views mouseevent]
+  "extract mouse commands from touched views"
   (remove nil? (map :co views)))
 
 
@@ -49,7 +52,7 @@
   "entering point"
   (let [keych (chan)
 
-        mousech (chan)
+        tchch (chan)
         
         glstate (webgl/init)
         
@@ -69,16 +72,16 @@
      js/document
      EventType.KEYUP
      (fn [event] (put! keych {:code (.-keyCode event) :value false})))
-
+    
     (events/listen
      js/document
      EventType.MOUSEDOWN
-     (fn [event] (put! mousech {:code "mouse" :x (.-clientX event) :y (.-clientY event) :type "down"})))
+     (fn [event] (put! tchch {:code "mouse" :x (.-clientX event) :y (.-clientY event) :type "down"})))
 
     (events/listen
      js/document
      EventType.MOUSEUP
-     (fn [event] (put! mousech {:code "mouse" :x (.-clientX event) :y (.-clientY event) :type "up"})))
+     (fn [event] (put! tchch {:code "mouse" :x (.-clientX event) :y (.-clientY event) :type "up"})))
 
     (events/listen
      js/window
@@ -100,7 +103,7 @@
              
              keyevent (poll! keych)
              
-             mouseevent (poll! mousech)
+             tchevent (poll! tchch)
 
              oneuimap (oldstate :uimap)
              
@@ -123,19 +126,17 @@
                                      projection
                                      views)]
          
-         (if mouseevent
-           (let [picked (ui/collect-pressed-views viewmap mouseevent)
+         (if tchevent
+           (let [picked (ui/collect-pressed-views viewmap tchevent)
                  views (map viewmap picked)
                  ;;newviewmap (gen-mouse-state viewmap views mouseevent)
-                 commands (get-mouse-commands views mouseevent)
+                 commands (get-mouse-commands views tchevent)
 
                  newuimap (if (= "ShowMenu" (first commands))
                             (ui/gen-from-desc
                              layouts/menu
                              (get-in glstate [:tempcanvas]))
-                            oneuimap
-                            )
-                 ]
+                            oneuimap)]
 
              ;; change state if command wants you to do that
              

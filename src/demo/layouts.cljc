@@ -1,4 +1,4 @@
-(ns gui.layouts)
+(ns demo.layouts)
 
 (def hud
 ;; CL Class TE text BC back color FC fore color WI width HE height
