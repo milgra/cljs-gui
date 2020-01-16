@@ -56,12 +56,12 @@
         
         glstate (webgl/init)
         
-        uimap (ui/gen-from-desc
+        viewmap (ui/gen-from-desc
                layouts/hud
                (get-in glstate [:tempcanvas]))
 
         state {:glstate glstate
-               :uimap uimap}]
+               :viewmap viewmap}]
 
     (events/listen
      js/document
@@ -73,10 +73,10 @@
      EventType.KEYUP
      (fn [event] (put! keych {:code (.-keyCode event) :value false})))
     
-    (events/listen
-     js/document
-     EventType.MOUSEDOWN
-     (fn [event] (put! tchch {:code "mouse" :x (.-clientX event) :y (.-clientY event) :type "down"})))
+    ;; (events/listen
+    ;;  js/document
+    ;;  EventType.MOUSEDOWN
+    ;;  (fn [event] (put! tchch {:code "mouse" :x (.-clientX event) :y (.-clientY event) :type "down"})))
 
     (events/listen
      js/document
@@ -92,7 +92,7 @@
     
     (animate
      state
-     (fn [oldstate frame time]
+     (fn [prestate frame time]
        (let [projection (math4/proj_ortho
                          0
                          (.-innerWidth js/window)
@@ -105,11 +105,9 @@
              
              tchevent (poll! tchch)
 
-             oneuimap (oldstate :uimap)
-             
              viewmap (ui/align
-                      (oneuimap :viewmap)
-                      (oneuimap :views)
+                      (prestate :viewmap)
+                      (((prestate :viewmap) :baseview) :sv)
                       0
                       0
                       (. js/window -innerWidth)
@@ -117,37 +115,33 @@
              
              viewids (ui/collect-visible-ids
                       viewmap
-                      (oneuimap :views)
+                      ((viewmap :baseview) :sv)
                       "")
-
-             views (map viewmap viewids)
              
-             newglstate (webgl/draw! (oldstate :glstate) 
+             newglstate (webgl/draw! (prestate :glstate) 
                                      projection
-                                     views)]
-         
+                                     (map viewmap viewids))]
+
          (if tchevent
            (let [picked (ui/collect-pressed-views viewmap tchevent)
                  views (map viewmap picked)
                  ;;newviewmap (gen-mouse-state viewmap views mouseevent)
                  commands (get-mouse-commands views tchevent)
 
-                 newuimap (if (= "ShowMenu" (first commands))
+                 newviewmap (if (= "ShowMenu" (first commands))
                             (ui/gen-from-desc
                              layouts/menu
                              (get-in glstate [:tempcanvas]))
-                            oneuimap)]
+                            viewmap)]
 
              ;; change state if command wants you to do that
              
-             (-> oldstate
-                 (assoc :uimap newuimap)
+             (-> prestate
+                 (assoc :viewmap newviewmap)
                  (assoc :glstate newglstate)
-                 ;;(assoc-in [:uimap :viewmap] newviewmap)
                  ))
-           (-> oldstate
+           (-> prestate
                (assoc :glstate newglstate)
-               ;;(assoc-in [:uimap :viewmap] viewmap)
                )))))))
 
 (main)

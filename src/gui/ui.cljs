@@ -101,41 +101,37 @@
 
 (defn gen-base-views [lines]
   "generate basic views from line descriptions"
-  (reduce
-   (fn [{:keys [viewmap views] :as oldui} line]
-     (if-not (or (= (count line) 0) (str/ends-with? line "|"))
-       (let [{:keys [id cl w h bc fc ta ba la ra va ha te co]} (parse-desc line)
-             view (-> (gen-view (keyword (gen-id 8)) id cl w h bc)
-                      (add-align ta ba la ra ha va)
-                      (assoc :te te)
-                      (assoc :co co))]
-         (-> oldui
-             (assoc :viewmap (assoc viewmap (view :id) view))
-             (assoc :views (conj views (view :id)))))
-       oldui))
-   {:viewmap {} :views [] }
-   lines))
+  (let [baseview (gen-view :base "base" "base" 100 100 "00000000")]
+    (reduce
+     (fn [viewmap line]
+       (if-not (or (= (count line) 0) (str/ends-with? line "|"))
+         (let [{:keys [id cl w h bc fc ta ba la ra va ha te co]} (parse-desc line)
+               view (-> (gen-view (keyword (gen-id 8)) id cl w h bc)
+                        (add-align ta ba la ra ha va)
+                        (assoc :te te)
+                        (assoc :co co))
+               base (:baseview viewmap)]
+           (-> viewmap
+               (assoc (view :id) view)
+               (assoc :baseview (add-subview base view))))
+         viewmap))
+     {:baseview baseview}
+     lines)))
 
 
-(defn gen-detailed-views [ui tempcanvas]
+(defn gen-detailed-views [viewmap tempcanvas]
   "generate labels for buttons if needed"
   (reduce
-   (fn [oldui pair]
+   (fn [oldmap pair]
      (let [{:keys [id te] :as view} (val pair)]
        (if te
          (let [newview (gen-label tempcanvas te 40)]
-           (-> oldui
-               (assoc-in [:viewmap id] (add-subview view newview))
-               (assoc-in [:viewmap (newview :id)] newview)
-               ))
-         oldui)))
-   ui
-   (ui :viewmap)))
-
-
-(defn replace-layout-ids [ui]
-  "replace alignment property letters with ids"
-  (assoc ui :viewmap (replace-alignment-names (ui :viewmap))))
+           (-> oldmap
+               (assoc id (add-subview view newview))
+               (assoc (newview :id) newview)))
+         oldmap)))
+   viewmap
+   viewmap))
 
 
 (defn gen-from-desc [desc tempcanvas]
@@ -143,7 +139,7 @@
   (let [lines (str/split-lines desc)]
     (-> (gen-base-views lines)
         (gen-detailed-views tempcanvas)
-        (replace-layout-ids))))
+        (replace-alignment-names))))
 
 
 (defn align-view [viewmap id cx cy width height]
