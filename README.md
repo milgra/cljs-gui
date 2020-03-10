@@ -3,6 +3,10 @@ Game UI Renderer for ClojureScript
 
 ![screenshot](screenshot.png)
 
+how to run :
+
+```shadow-cljs watch app```
+
 [Live Demo](https://milgra.github.io/cljs-gui/index.html)
 
 ## Features
