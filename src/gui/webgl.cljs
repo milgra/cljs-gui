@@ -1,6 +1,7 @@
 (ns gui.webgl
   (:require [gui.bitmap :as bitmap]
             [gui.texmap :as texmap]
+            [gui.floatbuffer :as fb]
             [clojure.string :as str]
             [cljs-webgl.context :as context]
             [cljs-webgl.shaders :as shaders]
@@ -61,9 +62,13 @@
         
         ui-location-pos (shaders/get-attrib-location context ui-shader "position")
         ui-location-texcoord (shaders/get-attrib-location context ui-shader "texcoord")]
+
+    (set! (. tempcanvas -width) 1000)
+    (set! (. tempcanvas -height) 200)
     
     {:context context
-     :tempcanvas tempcanvas 
+     :tempcanvas tempcanvas
+     :floatbuffer (fb/create!)
      :textures {}
      :ui-shader ui-shader
      :ui-buffer ui-buffer
@@ -77,26 +82,38 @@
   "returns glyph sizes"
   (let [context (.getContext canvas "2d" )
         itemhth (* height 1.2)]
-    (set! (.-font context) (str height "px Cantarell"))
+    (set! (.-font context) (str height "px Ubuntu Bold"))
     (set! (.-fillStyle context) "#000000")
     (set! (.-textBaseline context) "middle")
     {:width (int (.-width (.measureText context text)))
      :height (int itemhth)}))
 
 
-(defn bitmap-for-glyph [canvas height text]
+(defn int-to-rgba [color]
+  (let [r (bit-and (bit-shift-right color 24) 0xFF)
+        g (bit-and (bit-shift-right color 16) 0xFF)
+        b (bit-and (bit-shift-right color 8) 0xFF)
+        a (bit-and color 0xFF)]
+    (str "rgba("r","g","b","(/ a 255)")")))
+
+
+(defn bitmap-for-glyph [canvas width height texture]
   "returns glyph bitmap"
-  (let [context (.getContext canvas "2d")
-        itemhth (int (* height 1.2))]
-    (set! (.-font context) (str height "px Cantarell"))
-    (set! (.-fillStyle context) "#000000")
+  (let [size (:size texture)
+        forecol (int-to-rgba (:color texture))
+        backcol (int-to-rgba (:background texture))
+        context (.getContext canvas "2d")]
+    (.clearRect context 0 0 (.-width canvas) (.-height canvas))
+    (set! (.-fillStyle context) backcol)
+    (.fillRect context 0 0 (.-width canvas) (.-height canvas))
+    (set! (.-font context) (str "bolder " size "px Ubuntu Bold"))
+    (set! (.-fillStyle context) forecol)
     (set! (.-textBaseline context) "middle")
-    (.clearRect context 0 0 (.-width canvas) (.-height canvas)) 
-    (let [width (int (.-width (.measureText context text)))]
-      (.fillText context text 0 (int (/ itemhth 1.8)))
-      {:data (.-data (.getImageData context 0 0 width itemhth))
+    (let [itemwth (int (.-width (.measureText context (:text texture))))]
+      (.fillText context (:text texture) (int (* (- width itemwth) 0.5)) (int (/ height 1.8)))
+      {:data (.-data (.getImageData context 0 0 width height))
        :width width
-       :height itemhth})))
+       :height height})))
 
 
 (defn tex-gen-for-ids [tempcanvas ui-texmap views]
@@ -105,33 +122,31 @@
          tmap ui-texmap]
     (if (empty? remviews)
       tmap
-      (let [{:keys [tx te] :as view} (first remviews)
-            newtmap (if (texmap/hasbmp? tmap tx)
+      (let [{:keys [id texture w h] :as view} (first remviews)
+            newtmap (if (texmap/hasbmp? tmap texture)
                       tmap
                       (cond
 
-                        (str/starts-with? tx "Debug")
+                        (= (:type texture) "Debug")
                         ;; show full texture in quad
-                        (assoc-in tmap [:contents tx] [0 0 1 1])
+                        (assoc-in tmap [:contents texture] [0 0 1 1])
 
-                        (str/starts-with? tx "Image")
+                        (= (:type texture) "Image")
                         ;; show image in quad
                         (tmap)
 
-                        (str/starts-with? tx "Color")
+                        (= (:type texture) "Color")
                         ;; show color in quad
-                        (let [rem (subs tx 8)
-                              r (js/parseInt (subs rem 0 2) 16)
-                              g (js/parseInt (subs rem 2 4) 16)
-                              b (js/parseInt (subs rem 4 6) 16)
-                              a (js/parseInt (subs rem 6 8) 16)]
-                          (texmap/setbmp tmap (bitmap/init 10 10 r g b a) tx 1))
+                        (let [r (bit-and (bit-shift-right (:color texture) 24) 0xFF)
+                              g (bit-and (bit-shift-right (:color texture) 16) 0xFF)
+                              b (bit-and (bit-shift-right (:color texture) 8) 0xFF)
+                              a (bit-and (:color texture) 0xFF)]
+                          (texmap/setbmp tmap (bitmap/init 10 10 r g b a) texture 1))
 
-                        (str/starts-with? tx "Glyph")
+                        (= (:type texture) "Label")
                         ;; show glyph
-                        (let [arg (str/split (subs tx 5) #"%")
-                              bmp (bitmap-for-glyph tempcanvas (js/parseInt (arg 0)) (arg 1))]
-                          (texmap/setbmp tmap bmp tx 0))
+                        (let [bmp (bitmap-for-glyph tempcanvas w h texture)]
+                          (texmap/setbmp tmap bmp texture 0))
 
                         :default
                         ;; return empty texmap if unknown
@@ -140,8 +155,22 @@
         (recur (rest remviews) newtmap)))))
 
 
+(defn reset [{:keys [ui-texmap] :as state}]
+  (assoc state :ui-texmap (texmap/reset ui-texmap)))
+
+
+(defn clear! [{:keys [context ui-texmap] :as state}]
+  (buffers/clear-color-buffer
+   context
+   0.1
+   0.1
+   0.4
+   1.0))
+
+
 (defn draw! [{:keys [context
                      tempcanvas
+                     floatbuffer
                      textures
                      ui-shader
                      ui-buffer
@@ -152,22 +181,28 @@
              projection
              views]
   "draw views defined by x y width height and texure requirements." 
+  ;(cljs.pprint/pprint views)
+
   (let [;; generate textures for new views
         newtexmap (tex-gen-for-ids tempcanvas ui-texmap views)
         ;; generate vertex data from views
-        vertexes (flatten
-                  (map
-                   (fn [{:keys [x y w h tx] :as view}]
-                     (let [[tlx tly brx bry] (texmap/getbmp newtexmap tx)]
-                        (concat
-                        [x y] [tlx tly]
-                        [(+ x w) y] [brx tly]
-                        [x (+ y h)] [tlx bry]
-                        
-                        [(+ x w) y] [brx tly]
-                        [(+ x w) (+ y h)] [brx bry]
-                        [x (+ y h)] [tlx bry] ))) views))]
-
+        resfb (fb/empty! floatbuffer)
+        newfb (reduce (fn [oldbuf {:keys [id x y w h texture] :as view}]
+                        (if-not texture
+                          oldbuf
+                          (let [[tlx tly brx bry] (texmap/getbmp newtexmap texture)]
+                            (fb/append!
+                             oldbuf
+                             (array x y tlx tly
+                                    (+ x w) y brx tly
+                                    x (+ y h) tlx bry
+                                    
+                                    (+ x w) y brx tly
+                                    (+ x w) (+ y h) brx bry
+                                    x (+ y h) tlx bry))))) resfb views)]
+    
+    ;(cljs.pprint/pprint vertexes)>
+    
     ;; upload texture map if changed
     (when (newtexmap :changed)
       (texture/upload-texture
@@ -181,22 +216,14 @@
     (buffers/upload-buffer
      context
      ui-buffer
-     (arrays/float32 vertexes)
+     (:data newfb)
      buffer-object/array-buffer
      buffer-object/dynamic-draw)
-
-    ;; clear canvas
-    (buffers/clear-color-buffer
-     context
-     0.1
-     0.1
-     0.4
-     1.0)
 
     ;; draw vertexes
     (buffers/draw!
      context
-     :count (/ (count vertexes) 4)
+     :count (/ (:index newfb) 4)
      :first 0
      :shader ui-shader
      :draw-mode draw-mode/triangles
@@ -224,4 +251,7 @@
                 :name "texture_main"
                 :texture-unit texture-unit/texture0}])
 
-    (assoc state :ui-texmap (assoc newtexmap :changed false))))
+    (-> state
+        (assoc :ui-texmap (assoc newtexmap :changed false))
+        (assoc :floatbuffer newfb)
+        )))

@@ -1,5 +1,5 @@
-;; texture map
-;; places smaller bitmaps into one big bitmap to use it as gpu texture
+; texture map
+; places smaller bitmaps into one big bitmap to use it as gpu texture
 
 (ns gui.texmap
   (:require [gui.bitmap :as bitmap]))
@@ -7,13 +7,23 @@
 
 (defn init [w h r g b a]
   "create texture map with given background color"
-  (let [result {:texbmp (bitmap/init w h r g b a)
+  (let [result {:texbmp (bitmap/init w h 0 0 0 0)
                 :contents {}
                 :changed true
                 :lasth 0
                 :lastx 0
                 :lasty 0}]
     result))
+
+
+(defn reset [{texbmp :texbmp :as texmap}]
+  (assoc texmap
+         :texbmp (bitmap/clear texbmp 0 0 0 0)
+         :contents {}
+         :changed true
+         :lasth 0
+         :lastx 0
+         :lasty 0))
 
 
 (defn hasbmp? [{contents :contents} id]
@@ -33,7 +43,7 @@
   "adds bmp to texmap with given id"
   (let [;;new height is 0 if entering new row else check if we have to increase it
         newh (if (> (+ lastx width) (texbmp :width))
-               0
+               height
                (if (> height lasth)
                  height
                  lasth))
@@ -57,9 +67,9 @@
         newbry (/ (- texh inset) (texbmp :height))
         
         over? (> newh (texbmp :height))]
-    
+
     (if over?
-      nil
+      texmap
       (-> texmap
           (assoc-in [:contents texid] [newtlx newtly newbrx newbry])
           (assoc :lastx texw)
